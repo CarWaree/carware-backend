@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CarWare.Domain\CarWare.Domain.csproj" />
+    <ProjectReference Include="..\CarWare.Application\CarWare.Application.csproj" />
+  </ItemGroup>
+</Project>
