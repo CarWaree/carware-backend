@@ -25,9 +25,6 @@ The solution is divided into four main projects (layers) to ensure minimal coupl
 
 Commit messages must follow:
 
-```
-```
-
 - `feat`: New feature or major enhancement  
   Example: `feat: implement vehicle tracking endpoint`
 
