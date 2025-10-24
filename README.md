@@ -1,4 +1,4 @@
-# CarWare Backend Solution
+# Carware Backend Solution
 
 This repository contains the backend solution for the **CarWare** application, built using **C#/.NET** and structured according to **Clean Architecture** principles. This ensures separation of concerns, testability, and maintainability.
 
@@ -6,19 +6,16 @@ This repository contains the backend solution for the **CarWare** application, b
 
 ## 1. Architecture Overview
 
+
 The solution is divided into four main projects (layers) to ensure minimal coupling and high cohesion:
 
-- **CarWare.Domain**  
-  Core business entities, value objects, and interfaces. (Core Layer)
+| Layer                  | Purpose                                                      | References                      |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------- |
+| **Domain** 🏛️         | Core business entities, value objects, and interfaces        | None (independent core)         |
+| **Application** ⚙️     | Business logic, use cases (Commands/Queries), DTOs           | `Domain`                        |
+| **Infrastructure** 🏗️ | EF Core DbContext, repositories, Identity, external services | `Domain`                        |
+| **API** 🌐             | Web API controllers, DI setup, configuration, middleware     | `Application`, `Infrastructure` |
 
-- **CarWare.Application**  
-  Business logic, use cases (Commands/Queries), DTOs, and repository interfaces. References: `CarWare.Domain`
-
-- **CarWare.Infrastructure**  
-  Implementation of external dependencies (Entity Framework Context, Repositories, Identity). References: `CarWare.Domain`
-
-- **CarWare.API**  
-  Presentation layer (Web API Controllers), Dependency Injection setup, and configuration. References: `CarWare.Application`, `CarWare.Infrastructure`
 
 ---
 
@@ -27,10 +24,6 @@ The solution is divided into four main projects (layers) to ensure minimal coupl
 ### 2.1 Commit Message Standard (Conventional Commits)
 
 Commit messages must follow:
-
-```
-<type>: <subject>
-```
 
 - `feat`: New feature or major enhancement  
   Example: `feat: implement vehicle tracking endpoint`
@@ -41,7 +34,7 @@ Commit messages must follow:
 - `refactor`: Code restructuring without behavior change  
   Example: `refactor: simplify login service logic`
 
-### 2.2 Pull Request & Clean Code
+### 2.2 Pull Request
 
 - Always pull latest `develop` before creating a branch.  
 
@@ -51,21 +44,26 @@ Commit messages must follow:
 
 ### 3.1 Clone Repository
 
-Clone the repo via Visual Studio or GitHub and open the solution.
+git clone https://github.com/your-repo/CarWare.Backend.git
 
 ---
 
 ## 3.2 Key Packages
 
-Install these packages via **NuGet Package Manager**:
+Install the following packages via **NuGet Package Manager**:
 
--   Microsoft.EntityFrameworkCore.SqlServer  - SQL Server provider for EF Core.
+- **`Microsoft.EntityFrameworkCore.SqlServer`**  
+  SQL Server provider for **Entity Framework Core**.
 
-- Microsoft.EntityFrameworkCore.Tools  - Enables migrations and database updates.
+- **`Microsoft.EntityFrameworkCore.Tools`**  
+  Enables **EF Core migrations** and database management tools.
 
-- Microsoft.AspNetCore.Identity.EntityFrameworkCore  - Integrates ASP.NET Identity for authentication and user management.
+- **`Microsoft.AspNetCore.Identity.EntityFrameworkCore`**  
+  Integrates **ASP.NET Identity** for authentication and user management.
 
-- Microsoft.AspNetCore.Authentication.JwtBearer  - Enables JWT token-based authentication.
+- **`Microsoft.AspNetCore.Authentication.JwtBearer`**  
+  Provides support for **JWT token-based authentication**.
+
 
 ---
 
@@ -95,23 +93,12 @@ Open **Package Manager Console (PMC)** in Visual Studio and select the **Default
 
 ### Step 1: Add Migrations
 
-**For SQL database (core tables):**
-
 ```powershell
-Add-Migration InitialCreate
+Add-Migration InitialCreate        # Core tables
+Add-Migration IdentityInitial      # Identity tables
 ```
-
-**For Identity tables (users, roles):**
-
-```powershell
-Add-Migration IdentityInitial
-```
-
-> You can separate migrations by feature if needed.
-
 ### Step 2: Update Database
 
-**Apply SQL migration:**
 ```powershell
 Update-Database
 ```

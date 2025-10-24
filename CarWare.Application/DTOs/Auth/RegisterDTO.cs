@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CarWare.Infrastructure.Context
+namespace CarWare.Application.DTOs.Auth
 {
-    internal class CarWareDbContext
+    internal class RegisterDTO
     {
 
     }
