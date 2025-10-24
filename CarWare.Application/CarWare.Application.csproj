@@ -15,7 +15,6 @@
     <ProjectReference Include="..\CarWare.Infrastructure\CarWare.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="DTOs\" />
     <Folder Include="Interfaces\" />
     <Folder Include="Services\" />
   </ItemGroup>
