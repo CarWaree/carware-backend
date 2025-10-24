@@ -1,4 +1,7 @@
 
+
+using CarWare.Application.Interfaces;
+using CarWare.Application.Services;
 using CarWare.Domain.Entities;
 using CarWare.Infrastructure.Context;
 using Microsoft.AspNetCore.Identity;
@@ -19,6 +22,7 @@ namespace CarWare.API
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+            builder.Services.AddScoped<IAuthService, AuthService>();
 
             //DB
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -56,6 +60,8 @@ namespace CarWare.API
 
             app.UseHttpsRedirection();
 
+
+            app.UseAuthentication();
             app.UseAuthorization();
 
 
