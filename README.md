@@ -1,4 +1,4 @@
-# CarWare Backend Solution
+# Carware Backend Solution
 
 This repository contains the backend solution for the **CarWare** application, built using **C#/.NET** and structured according to **Clean Architecture** principles. This ensures separation of concerns, testability, and maintainability.
 
@@ -24,10 +24,6 @@ The solution is divided into four main projects (layers) to ensure minimal coupl
 ### 2.1 Commit Message Standard (Conventional Commits)
 
 Commit messages must follow:
-
-```
-<type>: <subject>
-```
 
 - `feat`: New feature or major enhancement  
   Example: `feat: implement vehicle tracking endpoint`
