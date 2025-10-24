@@ -3,7 +3,9 @@
 using CarWare.Application.Interfaces;
 using CarWare.Application.Services;
 using CarWare.Domain.Entities;
+using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
+using CarWare.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -37,6 +39,8 @@ namespace CarWare.API
                 option.Password.RequireDigit = false;
                 option.Password.RequireNonAlphanumeric = false;
             }).AddEntityFrameworkStores<ApplicationDbContext>();
+            builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+
 
             /*//JWT
             builder.Services.AddAuthentication(options =>
