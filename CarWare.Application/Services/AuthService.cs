@@ -1,4 +1,5 @@
-﻿using CarWare.Application.Interfaces;
+﻿using CarWare.Application.DTOs.Auth;
+using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
 using Microsoft.AspNetCore.Identity;
@@ -27,53 +28,9 @@ namespace CarWare.Application.Services
             _userManager = userManager;
             _jwt = jwt.Value;
         }
-        public async Task<AuthModel> RegisterAsync(RegisterModel model)
-        {
-            if (await _userManager.FindByEmailAsync(model.Email) is not null)
-                return new AuthModel { Message = "Email is already registered!" };
-
-            if (await _userManager.FindByNameAsync(model.Username) is not null)
-                return new AuthModel { Message = "Username is already registered!" };
-
-            var user = new ApplicationUser
-            {
-                UserName = model.Username,
-                Email = model.Email,
-                FirstName = model.FirstName,
-                LastName = model.LastName
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password);
-
-            if (!result.Succeeded)
-            {
-                var errors = string.Empty;
-                foreach (var error in result.Errors)
-                {
-                    errors += $"{error.Description},";
-                }
-                return new AuthModel { Message = errors };
-            }
-
-            await _userManager.AddToRoleAsync(user, "User");
-
-            var jwtSecurityToken = await CreateJwtToken(user);
-            var rolesList = await _userManager.GetRolesAsync(user);
-
-            return new AuthModel
-            {
-                Email = user.Email,
-                Username = user.UserName,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                IsAuthenticated = true,
-                Roles = rolesList.ToList(),
-                Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken),
-                ExpiresOn = jwtSecurityToken.ValidTo,
-                Message = "Registration successful"
-            };
-        }
+         
         
+
 
         private async Task<JwtSecurityToken> CreateJwtToken(ApplicationUser user)
         {
@@ -109,7 +66,85 @@ namespace CarWare.Application.Services
             return jwtSecurityToken;
         }
 
+
+        async Task<AuthDto> IAuthService.RegisterAsync(RegisterDto model)
+        {
+            if (await _userManager.FindByEmailAsync(model.Email) is not null)
+                return new AuthDto { Message = "Email is already registered!" };
+
+            if (await _userManager.FindByNameAsync(model.Username) is not null)
+                return new AuthDto { Message = "Username is already registered!" };
+
+            var user = new ApplicationUser
+            {
+                UserName = model.Username,
+                Email = model.Email,
+                FirstName = model.FirstName,
+                LastName = model.LastName
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password);
+
+            if (!result.Succeeded)
+            {
+                var errors = string.Empty;
+                foreach (var error in result.Errors)
+                {
+                    errors += $"{error.Description},";
+                }
+                return new AuthDto { Message = errors };
+            }
+
+            await _userManager.AddToRoleAsync(user, "User");
+
+            var jwtSecurityToken = await CreateJwtToken(user);
+            var rolesList = await _userManager.GetRolesAsync(user);
+
+            return new AuthDto
+            {
+                Email = user.Email,
+                Username = user.UserName,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                IsAuthenticated = true,
+                Roles = rolesList.ToList(),
+                Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken),
+                ExpiresOn = jwtSecurityToken.ValidTo,
+                Message = "Registration successful"
+            };
         }
+
+         async public Task<AuthDto> LoginAsync(LoginDto loginDto)
+        {
+            var user = await _userManager.FindByEmailAsync(loginDto.EmailOrUsername);
+
+            if (user is null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
+                return new AuthDto { Message = "Invalid email or password" };
+
+            var jwtSecurityToken = await CreateJwtToken(user);
+            var rolesList = await _userManager.GetRolesAsync(user);
+
+            return new AuthDto
+            {
+                IsAuthenticated = true,
+                Username = user.UserName,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                PhoneNumber = user.PhoneNumber,
+                Roles = rolesList.ToList(),
+                Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken),
+                ExpiresOn = jwtSecurityToken.ValidTo,
+                Message = "Login successful"
+            };
+
+        }
+
+        public Task<AuthDto> LoginWithGoogleAsync(string googleToken)
+        {
+            throw new NotImplementedException();
+        }
+    }
     }
 
 

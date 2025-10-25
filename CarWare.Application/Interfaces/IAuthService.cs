@@ -1,4 +1,5 @@
-﻿using CarWare.Domain.Entities;
+﻿using CarWare.Application.DTOs.Auth;
+using CarWare.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,10 @@ namespace CarWare.Application.Interfaces
     public interface IAuthService
 
     {
-        Task<AuthModel> RegisterAsync(RegisterModel request);
+        Task<AuthDto> RegisterAsync(RegisterDto request);
+        Task<AuthDto> LoginAsync(LoginDto loginDto);
+        Task<AuthDto> LoginWithGoogleAsync(string googleToken);
+
+
     }
 }
