@@ -1,59 +1,82 @@
-
-
 using CarWare.Application.Interfaces;
 using CarWare.Application.Services;
 using CarWare.Domain.Entities;
+using CarWare.Domain.helper;
 using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace CarWare.API
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-            builder.Services.AddScoped<IAuthService, AuthService>();
 
-            //DB
+            // ?? Register Services
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+
+            // ?? Database
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
             });
 
-            // Identity
-            builder.Services.AddIdentity<ApplicationUser, IdentityRole>(option =>
+            // ?? Identity
+            builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
-                option.Password.RequiredLength = 4;
-                option.Password.RequireDigit = false;
-                option.Password.RequireNonAlphanumeric = false;
-            }).AddEntityFrameworkStores<ApplicationDbContext>();
-            builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+                options.Password.RequiredLength = 4;
+                options.Password.RequireDigit = false;
+                options.Password.RequireNonAlphanumeric = false;
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
+            // ?? JWT Settings
+            builder.Services.Configure<JWT>(builder.Configuration.GetSection("JWT"));
 
-            /*//JWT
+            // ?? JWT Authentication
+            var jwtSettings = builder.Configuration.GetSection("JWT").Get<JWT>();
+            var key = Encoding.UTF8.GetBytes(jwtSettings.Key);
+
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
+            })
+            .AddJwtBearer(options =>
             {
-
-            });*/
+                options.RequireHttpsMetadata = false;
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidIssuer = jwtSettings.Issuer,
+                    ValidAudience = jwtSettings.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(key)
+                };
+            });
 
             var app = builder.Build();
+
+            // ?? Create roles when the app starts
+            await CreateRolesAsync(app);
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -64,14 +87,27 @@ namespace CarWare.API
 
             app.UseHttpsRedirection();
 
-
             app.UseAuthentication();
             app.UseAuthorization();
-
 
             app.MapControllers();
 
             app.Run();
+        }
+
+        // ?? Helper method to seed roles
+        private static async Task CreateRolesAsync(IApplicationBuilder app)
+        {
+            using var scope = app.ApplicationServices.CreateScope();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+            string[] roles = { "ADMIN", "USER" };
+
+            foreach (var role in roles)
+            {
+                if (!await roleManager.RoleExistsAsync(role))
+                    await roleManager.CreateAsync(new IdentityRole(role));
+            }
         }
     }
 }
