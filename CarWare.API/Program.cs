@@ -73,6 +73,13 @@ namespace CarWare.API
                 };
             });
 
+            // ?? Memory Cashe
+            builder.Services.AddDistributedMemoryCache();
+
+            // ?? Custom Service [Email Sender]
+            builder.Services.AddScoped<IEmailSender, EmailSender>();
+
+
             var app = builder.Build();
 
             // ?? Create roles when the app starts
