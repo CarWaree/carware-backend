@@ -1,24 +1,39 @@
-﻿using System.Net;
+﻿using CarWare.Application.Interfaces;
+using Microsoft.Extensions.Configuration;
+using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
-using CarWare.Application.Interfaces;
 
 namespace CarWare.Application.Services
 {
     public class EmailSender : IEmailSender
     {
+        private readonly IConfiguration _configuration;
+
+        public EmailSender(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
         public async Task SendEmailAsync(string email, string subject, string message)
         {
-            var smtpClient = new SmtpClient("smtp.gmail.com")
+            // Get settings from appsettings.json
+            var smtpHost = _configuration["EmailSettings:SmtpHost"];
+            var smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"]);
+            var senderEmail = _configuration["EmailSettings:SenderEmail"];
+            var senderPassword = _configuration["EmailSettings:SenderPassword"];
+            var senderDisplayName = _configuration["EmailSettings:SenderDisplayName"];
+
+            var smtpClient = new SmtpClient(smtpHost)
             {
-                Port = 587,
-                Credentials = new NetworkCredential("abdoabdel3ziz188@gmail.com", "aobd rdkm lqap manh"),
+                Port = smtpPort,
+                Credentials = new NetworkCredential(senderEmail, senderPassword),
                 EnableSsl = true,
             };
 
             var mailMessage = new MailMessage
             {
-                From = new MailAddress("abdoabdel3ziz188@gmail.com", "CarWare Support"),
+                From = new MailAddress(senderEmail, senderDisplayName),
                 Subject = subject,
                 Body = message,
                 IsBodyHtml = true,
