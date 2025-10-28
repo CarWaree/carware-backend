@@ -11,6 +11,5 @@ namespace CarWare.Application.Interfaces
         Task<bool> RequestResetAsync(ForgetPasswordDto forgetDTO);
         Task<ResetPasswordResultDto?> VerifyOtpAsync(VerifyOtpDto optDto);
         Task<IdentityResult> ResetPasswordAsync(ResetPasswordDto resetDto);
-        Task<AuthDto> LoginWithGoogleAsync(string googleToken);
     }
 }

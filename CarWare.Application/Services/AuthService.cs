@@ -35,12 +35,14 @@ namespace CarWare.Application.Services
 
         private string GetCacheKey(string email) => $"OTP_{email.ToUpperInvariant()}";
 
-        private async Task<JwtSecurityToken> CreateJwtToken(ApplicationUser user)
+        private async Task<String> CreateJwtToken(ApplicationUser user)
         {
+
+            #region Claims
             var userClaims = await _userManager.GetClaimsAsync(user);
             var roles = await _userManager.GetRolesAsync(user);
-            var roleClaims = new List<Claim>();
 
+            var roleClaims = new List<Claim>();
             foreach (var role in roles)
                 roleClaims.Add(new Claim("roles", role));
 
@@ -55,18 +57,24 @@ namespace CarWare.Application.Services
             }
             .Union(userClaims)
             .Union(roleClaims);
+            #endregion
 
+            #region Signing Credentials
             var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key));
             var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
+            #endregion
 
+            #region Design Token 
             var jwtSecurityToken = new JwtSecurityToken(
                 issuer: _jwt.Issuer,
                 audience: _jwt.Audience,
                 claims: claims,
-                expires: DateTime.Now.AddDays(_jwt.DurationInDays),
+                expires: DateTime.UtcNow.AddDays(_jwt.DurationInDays),
                 signingCredentials: signingCredentials);
+            #endregion
 
-            return jwtSecurityToken;
+            var tokenString = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
+            return tokenString;
         }
 
         public async Task<AuthDto> RegisterAsync(RegisterDto model)
@@ -202,11 +210,6 @@ namespace CarWare.Application.Services
             if (user == null) return IdentityResult.Success;
 
             return await _userManager.ResetPasswordAsync(user, resetDto.Token, resetDto.NewPassword);
-        }
-
-        public Task<AuthDto> LoginWithGoogleAsync(string googleToken)
-        {
-            throw new NotImplementedException();
-        }                                                              
+        }                                                             
     }
 }

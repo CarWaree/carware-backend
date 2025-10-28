@@ -79,6 +79,12 @@ namespace CarWare.API
             // ?? Custom Service [Email Sender]
             builder.Services.AddScoped<IEmailSender, EmailSender>();
 
+            builder.Services.AddAuthentication()
+            .AddGoogle(options =>
+            {
+                options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
+                options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
+            });
 
             var app = builder.Build();
 
