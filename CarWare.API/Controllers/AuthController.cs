@@ -1,8 +1,10 @@
 ﻿using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
+using CarWare.Domain.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -29,7 +31,7 @@ namespace CarWare.API.Controllers
         }
 
         [HttpPost("login")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> Login(LoginDto dto)
         {
             var result = await _authService.LoginAsync(dto);
@@ -67,43 +69,16 @@ namespace CarWare.API.Controllers
             return result.Succeeded ? Ok("Password reset successfully"): BadRequest(result.Errors);
         }
 
-        [HttpGet("login-google")]
-        public IActionResult GoogleLogin()
+        [HttpGet("google-login")]
+        public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
         {
-            var properties = new AuthenticationProperties
-            {
-                RedirectUri = Url.Action(nameof(GoogleCallback))
-            };
-
-            return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+            return await _authService.ExternalLoginCallback(returnUrl, remoteError);
         }
 
-        [HttpGet("signin-google")]
-        public async Task<IActionResult> GoogleCallback()
+        [HttpPost("Logout")]
+        public async Task<IActionResult> Logout()
         {
-            var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
-
-            if (!result.Succeeded || result.Principal == null)
-                return BadRequest("Google authentication failed.");
-
-            var email = result.Principal.FindFirst(ClaimTypes.Email)?.Value;
-            var name = result.Principal.FindFirst(ClaimTypes.Name)?.Value;
-
-            if (string.IsNullOrEmpty(email))
-                return BadRequest("Email not found in Google profile.");
-
-            var tokenResult = await _authService.CreateJwtToken(email, name);
-
-            if (!tokenResult.IsAuthenticated)
-                return BadRequest(tokenResult.Message);
-
-            return Ok(new
-            {
-                message = "Google login successful",
-                token = tokenResult.Token,
-                email = tokenResult.Email,
-                username = tokenResult.Username
-            });
+            return await _authService.Logout();
         }
     }
 }
