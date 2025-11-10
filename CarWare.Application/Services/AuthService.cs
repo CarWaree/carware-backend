@@ -3,6 +3,7 @@ using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -19,15 +20,19 @@ namespace CarWare.Application.Services
     public class AuthService : IAuthService
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IDistributedCache _cache;
         private readonly IEmailSender _emailSender;
         private const int OtpValidityMinutes = 3;
         private readonly JWT _jwt;
 
-        public AuthService(UserManager<ApplicationUser> userManager, IOptions<JWT> jwt
+        public AuthService(UserManager<ApplicationUser> userManager
+            , SignInManager<ApplicationUser> signInManager
+            , IOptions<JWT> jwt
             , IEmailSender emailSender, IDistributedCache cache)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
             _jwt = jwt.Value;
             _cache = cache;
             _emailSender = emailSender;
@@ -37,10 +42,12 @@ namespace CarWare.Application.Services
 
         private async Task<JwtSecurityToken> CreateJwtToken(ApplicationUser user)
         {
+
+            #region Claims
             var userClaims = await _userManager.GetClaimsAsync(user);
             var roles = await _userManager.GetRolesAsync(user);
-            var roleClaims = new List<Claim>();
 
+            var roleClaims = new List<Claim>();
             foreach (var role in roles)
                 roleClaims.Add(new Claim("roles", role));
 
@@ -55,27 +62,33 @@ namespace CarWare.Application.Services
             }
             .Union(userClaims)
             .Union(roleClaims);
+            #endregion
 
+            #region Signing Credentials
             var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key));
             var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
+            #endregion
 
+            #region Design Token 
             var jwtSecurityToken = new JwtSecurityToken(
                 issuer: _jwt.Issuer,
                 audience: _jwt.Audience,
                 claims: claims,
-                expires: DateTime.Now.AddDays(_jwt.DurationInDays),
+                expires: DateTime.UtcNow.AddDays(_jwt.DurationInDays),
                 signingCredentials: signingCredentials);
+            #endregion
 
+            //var tokenString = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
             return jwtSecurityToken;
         }
 
         public async Task<AuthDto> RegisterAsync(RegisterDto model)
         {
-            if (await _userManager.FindByEmailAsync(model.Email) is not null)
-                return new AuthDto { Message = "Email is already registered!" };
-
-            if (await _userManager.FindByNameAsync(model.Username) is not null)
-                return new AuthDto { Message = "Username is already registered!" };
+            var existingEmail = await _userManager.FindByEmailAsync(model.Email);
+            var existingUser = await _userManager.FindByNameAsync(model.Username);
+            
+            if(existingEmail != null || existingUser != null)
+            return new AuthDto { Message = "User or Email is already registered!" };
 
             var user = new ApplicationUser
             {
@@ -94,7 +107,6 @@ namespace CarWare.Application.Services
                 {
                     errors += $"{error.Description},";
                 }
-                return new AuthDto { Message = errors };
             }
 
             await _userManager.AddToRoleAsync(user, "User");
@@ -133,7 +145,6 @@ namespace CarWare.Application.Services
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                PhoneNumber = user.PhoneNumber,
                 Roles = rolesList.ToList(),
                 Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken),
                 ExpiresOn = jwtSecurityToken.ValidTo,
@@ -167,7 +178,7 @@ namespace CarWare.Application.Services
             return true;
         }
 
-        public async Task<ResetPasswordResultDto?> VerifyOtpAsync(VerifyOtpDto optDto)
+        public async Task<ResetPasswordResultDto> VerifyOtpAsync(VerifyOtpDto optDto)
         {
             var user = await _userManager.FindByEmailAsync(optDto.Email);
             if (user == null) return null;
@@ -204,9 +215,74 @@ namespace CarWare.Application.Services
             return await _userManager.ResetPasswordAsync(user, resetDto.Token, resetDto.NewPassword);
         }
 
-        public Task<AuthDto> LoginWithGoogleAsync(string googleToken)
+        public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
         {
-            throw new NotImplementedException();
-        }                                                              
+            if (remoteError != null)
+                return new BadRequestObjectResult(new { message = $"Error from external provider: {remoteError}" });
+
+            var info = await _signInManager.GetExternalLoginInfoAsync();
+            if (info == null)
+                return new BadRequestObjectResult(new { message = "External login information not found." });
+
+            var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
+
+            if (result.Succeeded)
+            {
+                var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+                var role = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
+                return new OkObjectResult(new
+                {
+                    message = "Login successful",
+                    user = new { user.Id, user.Email, Role = role }
+                });
+            }
+
+            // Create user if not exist
+            var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+            if (email == null)
+                return new BadRequestObjectResult(new { message = "Email claim not provided by external provider." });
+
+            var existingUser = await _userManager.FindByEmailAsync(email);
+            if (existingUser == null)
+            {
+                var newUser = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email
+                };
+
+                var createResult = await _userManager.CreateAsync(newUser);
+                if (!createResult.Succeeded)
+                    return new BadRequestObjectResult(createResult.Errors);
+
+                await _userManager.AddToRoleAsync(newUser, "Admin");
+                await _userManager.AddLoginAsync(newUser, info);
+                await _signInManager.SignInAsync(newUser, isPersistent: false);
+
+                return new OkObjectResult(new
+                {
+                    message = "User created and logged in successfully",
+                    user = new { newUser.Id, newUser.Email, Role = "Admin" }
+                });
+            }
+
+            // Link login to existing user
+            await _userManager.AddLoginAsync(existingUser, info);
+            await _signInManager.SignInAsync(existingUser, isPersistent: false);
+
+            var existingUserRole = (await _userManager.GetRolesAsync(existingUser)).FirstOrDefault();
+
+            return new OkObjectResult(new
+            {
+                message = "External login linked successfully",
+                user = new { existingUser.Id, existingUser.Email, Role = existingUserRole }
+            });
+        }
+
+        public async Task<IActionResult> Logout()
+        {
+            await _signInManager.SignOutAsync();
+            return new OkObjectResult(new { message = "Logged out successfully" });
+        }
     }
 }

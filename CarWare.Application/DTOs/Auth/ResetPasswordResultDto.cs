@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace CarWare.Application.DTOs.Auth
 {
@@ -10,6 +6,7 @@ namespace CarWare.Application.DTOs.Auth
     {
         public string UserID { get; set; }
 
+        [DataType(DataType.EmailAddress)]
         public string Email { get; set; }
 
         public string Token { get; set; }
