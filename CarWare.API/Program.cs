@@ -106,7 +106,7 @@ namespace CarWare.API
             app.Run();
         }
 
-        // ?? Helper method to seed roles
+        //Helper method to seed roles
         private static async Task CreateRolesAsync(IApplicationBuilder app)
         {
             using var scope = app.ApplicationServices.CreateScope();

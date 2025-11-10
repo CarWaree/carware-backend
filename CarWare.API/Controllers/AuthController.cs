@@ -15,10 +15,12 @@ namespace CarWare.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, SignInManager<ApplicationUser> signInManager)
         {
             _authService = authService;
+            _signInManager = signInManager;
         }
 
         [HttpPost("register")]
@@ -30,8 +32,8 @@ namespace CarWare.API.Controllers
             return Ok(result);
         }
 
+        [Authorize]
         [HttpPost("login")]
-        //[Authorize]
         public async Task<IActionResult> Login(LoginDto dto)
         {
             var result = await _authService.LoginAsync(dto);
@@ -69,7 +71,14 @@ namespace CarWare.API.Controllers
             return result.Succeeded ? Ok("Password reset successfully"): BadRequest(result.Errors);
         }
 
-        [HttpGet("google-login")]
+        [HttpGet("external-login")]
+        public IActionResult ExternalLogin(string provider, string? returnUrl = null)
+        {
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, returnUrl);
+            return new ChallengeResult(provider, properties);
+        }
+
+        [HttpGet("external-login-callback")]
         public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
         {
             return await _authService.ExternalLoginCallback(returnUrl, remoteError);
