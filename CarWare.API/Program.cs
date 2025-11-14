@@ -1,10 +1,14 @@
+using AutoMapper;
+using CarWare.API.Middlewares;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Services;
+using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
 using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
+using CarWare.Infrastructure.UnitOfWork;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -85,10 +89,40 @@ namespace CarWare.API
             //Custom Service [Email Sender]
             builder.Services.AddScoped<IEmailSender, EmailSender>();
 
+            //Unit of Work
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+            //autoMapper
+            builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+
+
             var app = builder.Build();
+
+
+            //update Database 
+            using var scope = app.Services.CreateScope();
+            var service = scope.ServiceProvider;
+            var _dbcontext = service.GetRequiredService<ApplicationDbContext>();
+
+            var LoggerFactory = service.GetRequiredService<ILoggerFactory>();
+
+            try
+            {
+                await _dbcontext.Database.MigrateAsync();
+            }
+            catch (Exception ex)
+            {
+
+                var logger = LoggerFactory.CreateLogger<Program>();
+                logger.LogError(ex, "error during migration");
+            }
 
             //Create roles when the app starts
             await CreateRolesAsync(app);
+
+            //Custom Middleware
+            app.UseMiddleware<ExceptionMiddleware>();
 
             //Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
