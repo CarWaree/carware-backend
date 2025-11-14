@@ -1,3 +1,4 @@
+using AutoMapper;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Services;
 using CarWare.Domain;
@@ -90,7 +91,31 @@ namespace CarWare.API
             //Unit of Work
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+            //autoMapper
+            builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+
+
             var app = builder.Build();
+
+
+            //update Database 
+            using var scope = app.Services.CreateScope();
+            var service = scope.ServiceProvider;
+            var _dbcontext = service.GetRequiredService<ApplicationDbContext>();
+
+            var LoggerFactory = service.GetRequiredService<ILoggerFactory>();
+
+            try
+            {
+                await _dbcontext.Database.MigrateAsync();
+            }
+            catch (Exception ex)
+            {
+
+                var logger = LoggerFactory.CreateLogger<Program>();
+                logger.LogError(ex, "error during migration");
+            }
 
             //Create roles when the app starts
             await CreateRolesAsync(app);

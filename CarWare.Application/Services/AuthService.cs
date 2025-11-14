@@ -1,4 +1,5 @@
-﻿using CarWare.Application.DTOs.Auth;
+﻿using AutoMapper;
+using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
@@ -26,16 +27,22 @@ namespace CarWare.Application.Services
         private const int OtpValidityMinutes = 3;
         private readonly JWT _jwt;
 
-        public AuthService(UserManager<ApplicationUser> userManager
-            , SignInManager<ApplicationUser> signInManager
-            , IOptions<JWT> jwt
-            , IEmailSender emailSender, IDistributedCache cache)
+        private readonly IMapper _mapper;
+
+        public AuthService(
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            IOptions<JWT> jwt,
+            IEmailSender emailSender,
+            IDistributedCache cache,
+            IMapper mapper)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _jwt = jwt.Value;
             _cache = cache;
             _emailSender = emailSender;
+            _mapper = mapper;
         }
 
         private string GetCacheKey(string email) => $"OTP_{email.ToUpperInvariant()}";
@@ -90,13 +97,8 @@ namespace CarWare.Application.Services
             if(existingEmail != null || existingUser != null)
             return new AuthDto { Message = "User or Email is already registered!" };
 
-            var user = new ApplicationUser
-            {
-                UserName = model.Username,
-                Email = model.Email,
-                FirstName = model.FirstName,
-                LastName = model.LastName
-            };
+            var user = _mapper.Map<ApplicationUser>(model);
+
 
             var result = await _userManager.CreateAsync(user, model.Password);
 
@@ -114,18 +116,15 @@ namespace CarWare.Application.Services
             var jwtSecurityToken = await CreateJwtToken(user);
             var rolesList = await _userManager.GetRolesAsync(user);
 
-            return new AuthDto
-            {
-                Email = user.Email,
-                Username = user.UserName,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                IsAuthenticated = true,
-                Roles = rolesList.ToList(),
-                Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken),
-                ExpiresOn = jwtSecurityToken.ValidTo,
-                Message = "Registration successful"
-            };
+            var authDto = _mapper.Map<AuthDto>(user);
+            authDto.IsAuthenticated = true;
+            authDto.Roles = rolesList.ToList();
+            authDto.Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
+            authDto.ExpiresOn = jwtSecurityToken.ValidTo;
+            authDto.Message = "Registration successful";
+
+            return authDto;
+
         }
 
         public async Task<AuthDto> LoginAsync(LoginDto loginDto)
@@ -283,6 +282,11 @@ namespace CarWare.Application.Services
         {
             await _signInManager.SignOutAsync();
             return new OkObjectResult(new { message = "Logged out successfully" });
+        }
+
+        public Task<AuthDto> LoginWithGoogleAsync(string googleToken)
+        {
+            throw new NotImplementedException();
         }
     }
 }
