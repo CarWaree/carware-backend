@@ -1,8 +1,10 @@
 using CarWare.Application.Interfaces;
 using CarWare.Application.Services;
+using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
 using CarWare.Domain.Interfaces;
+using CarWare.Infrastructure;
 using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -84,6 +86,9 @@ namespace CarWare.API
 
             //Custom Service [Email Sender]
             builder.Services.AddScoped<IEmailSender, EmailSender>();
+
+            //Unit of Work
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             var app = builder.Build();
 

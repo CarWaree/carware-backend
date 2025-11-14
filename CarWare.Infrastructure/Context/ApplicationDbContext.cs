@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,12 +17,20 @@ namespace CarWare.Infrastructure.Context
 
         public ApplicationDbContext() { }
 
+        public DbSet<Vehicle> vehicles { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
             // Apply entity configurations
             builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+            builder.Entity<Vehicle>()
+            .HasOne(c => c.user)           
+            .WithMany()                     
+            .HasForeignKey(c => c.userId)  
+            .OnDelete(DeleteBehavior.Cascade);
         }
 
         /*protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

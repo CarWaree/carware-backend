@@ -15,5 +15,7 @@ namespace CarWare.Domain.Entities
 
         [Required, StringLength(100)]
         public string LastName { get; set; }
+
+        public ICollection<Vehicle> vehicles { get; set; }
     }
 }
