@@ -1,3 +1,4 @@
+using CarWare.API.Middlewares;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Services;
 using CarWare.Domain.Entities;
@@ -89,6 +90,9 @@ namespace CarWare.API
 
             //Create roles when the app starts
             await CreateRolesAsync(app);
+
+            //Custom Middleware
+            app.UseMiddleware<ExceptionMiddleware>();
 
             //Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
