@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using CarWare.Domain.Entities;
 using CarWare.Application.DTOs.Auth;
+using CarWare.Application.DTOs.Vehicle;
 
 public class AuthProfile : Profile
 {
@@ -17,5 +18,7 @@ public class AuthProfile : Profile
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
             .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName));
+
+        CreateMap<Vehicle,VehicleDTOs>().ReverseMap();
     }
 }

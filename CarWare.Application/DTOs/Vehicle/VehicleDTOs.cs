@@ -9,6 +9,7 @@ namespace CarWare.Application.DTOs.Vehicle
 {
     public class VehicleDTOs
     {
+        public int Id { get; set; }
         [Required(ErrorMessage = "Model must be Required")]
         public string Model { get; set; }
 
