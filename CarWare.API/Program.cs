@@ -92,6 +92,10 @@ namespace CarWare.API
             //Unit of Work
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+            //vehicleservice
+            builder.Services.AddScoped<IVehicleService, Vehicleservice>();
+
+
             //autoMapper
             //builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             //builder.Services.AddAutoMapper(typeof(AuthProfile));
