@@ -39,7 +39,24 @@ namespace CarWare.API.Controllers
             {
                 return NotFound();
             }
-            return Ok(_mapper.Map<Vehicle,VehicleDTOs>(vehicle));
+            return Ok(_mapper.Map<Vehicle, VehicleDTOs>(vehicle));
+
         }
+        //Add
+        [HttpPost]
+        public async Task<ActionResult> AddVehicle([FromBody] VehicleDTOs dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var vehicleRepo = _unitOfWork.Repository<Vehicle>();
+            var vehicle = _mapper.Map<Vehicle>(dto);
+
+            await vehicleRepo.AddAsync(vehicle);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(_mapper.Map<VehicleDTOs>(vehicle));
+        }
+
     }
 }
