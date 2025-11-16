@@ -32,7 +32,7 @@ namespace CarWare.API.Controllers
             return Ok(result);
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {

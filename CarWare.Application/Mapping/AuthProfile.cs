@@ -1,7 +1,10 @@
 ﻿using AutoMapper;
-using CarWare.Domain.Entities;
 using CarWare.Application.DTOs.Auth;
 using CarWare.Application.DTOs.Vehicle;
+using CarWare.Domain.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 public class AuthProfile : Profile
 {
