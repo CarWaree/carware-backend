@@ -92,23 +92,20 @@ namespace CarWare.Application.Services
         public async Task<AuthDto> RegisterAsync(RegisterDto model)
         {
             var existingEmail = await _userManager.FindByEmailAsync(model.Email);
+            if (existingEmail != null)
+                return new AuthDto { Message = "Email is already registered!", IsAuthenticated = false };
+
             var existingUser = await _userManager.FindByNameAsync(model.Username);
-            
-            if(existingEmail != null || existingUser != null)
-            return new AuthDto { Message = "User or Email is already registered!" };
+            if (existingUser != null)
+                return new AuthDto { Message = "Username is already taken!", IsAuthenticated = false };
 
             var user = _mapper.Map<ApplicationUser>(model);
 
-
             var result = await _userManager.CreateAsync(user, model.Password);
-
             if (!result.Succeeded)
             {
-                var errors = string.Empty;
-                foreach (var error in result.Errors)
-                {
-                    errors += $"{error.Description},";
-                }
+                var errors = string.Join(",", result.Errors.Select(e => e.Description));
+                return new AuthDto { Message = errors, IsAuthenticated = false };
             }
 
             await _userManager.AddToRoleAsync(user, "User");
@@ -124,12 +121,12 @@ namespace CarWare.Application.Services
             authDto.Message = "Registration successful";
 
             return authDto;
-
         }
 
         public async Task<AuthDto> LoginAsync(LoginDto loginDto)
          {
-            var user = await _userManager.FindByEmailAsync(loginDto.EmailOrUsername);
+            var user = await _userManager.FindByEmailAsync(loginDto.EmailOrUsername)
+                ?? await _userManager.FindByNameAsync(loginDto.EmailOrUsername);
 
             if (user is null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
                 return new AuthDto { Message = "Invalid email or password" };
@@ -284,9 +281,9 @@ namespace CarWare.Application.Services
             return new OkObjectResult(new { message = "Logged out successfully" });
         }
 
-        public Task<AuthDto> LoginWithGoogleAsync(string googleToken)
+        /*//public Task<AuthDto> LoginWithGoogleAsync(string googleToken)
         {
             throw new NotImplementedException();
-        }
+        }*/
     }
 }

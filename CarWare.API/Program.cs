@@ -93,12 +93,11 @@ namespace CarWare.API
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             //autoMapper
-            builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
-
+            //builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+            //builder.Services.AddAutoMapper(typeof(AuthProfile));
+            builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
 
             var app = builder.Build();
-
 
             //update Database 
             using var scope = app.Services.CreateScope();
