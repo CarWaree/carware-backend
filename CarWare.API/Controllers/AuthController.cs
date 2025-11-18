@@ -53,7 +53,7 @@ namespace CarWare.API.Controllers
             return Ok(new
             {
                 success = true,
-                message = "If your email is registered, you will receive a verification code shortly."
+                message = "Check your email for the verification code"
             });
         }
 
