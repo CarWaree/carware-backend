@@ -22,13 +22,11 @@ namespace CarWare.Infrastructure.Context
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-
-            // Apply entity configurations
             builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
             builder.Entity<Vehicle>()
             .HasOne(c => c.user)           
-            .WithMany()                     
+            .WithMany(c => c.vehicles)                     
             .HasForeignKey(c => c.userId)  
             .OnDelete(DeleteBehavior.Cascade);
         }
