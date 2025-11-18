@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -151,46 +152,59 @@ namespace CarWare.Application.Services
 
         public async Task<bool> RequestResetAsync(ForgetPasswordDto forgetDTO)
         {
-            var user = await _userManager.FindByEmailAsync(forgetDTO.Email);
+            var email = forgetDTO.Email.Trim().ToUpper();
+            var user = await _userManager.FindByEmailAsync(email);
 
-            //if (user == null || !(await _userManager.IsEmailConfirmedAsync(user))) return true;
+            if (user == null) return true;
 
-            //generate and store OTP code (6 digits)
-            var cacheKey = GetCacheKey(forgetDTO.Email);
-            var otpCode = new Random().Next(100000, 999999).ToString();
-            var cacheOptions = new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
-            };
+            // Generate OTP
+            var otpBytes = new byte[4];
+            using (var rng = RandomNumberGenerator.Create())
+                rng.GetBytes(otpBytes);
 
-            //store the OTP in Distributed Cache with Expiration time
-            await _cache.SetStringAsync(cacheKey, otpCode, cacheOptions);
+            var otpCode = (BitConverter.ToUInt32(otpBytes, 0) % 900000 + 100000).ToString();
 
-            //send email with OTP
-            await _emailSender.SendEmailAsync(forgetDTO.Email, 
+            var cacheKey = $"otp:{otpCode}";
+
+            await _cache.SetStringAsync(cacheKey, email,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
+                });
+
+            // Send email
+            await _emailSender.SendEmailAsync(
+                forgetDTO.Email,
                 "Password Reset Code",
-                $"Your verification code is <b>{otpCode}</b>. It expires in 3 minutes.");
+                $"Your verification code is <b>{otpCode}</b>. It expires in 3 minutes."
+            );
 
             return true;
         }
 
         public async Task<ResetPasswordResultDto> VerifyOtpAsync(VerifyOtpDto optDto)
         {
-            var user = await _userManager.FindByEmailAsync(optDto.Email);
+            var cachedEmail = await _cache.GetStringAsync($"otp:{optDto.Otp}");
+            if (cachedEmail == null) return null;
+
+            var user = await _userManager.FindByEmailAsync(cachedEmail);
             if (user == null) return null;
 
-            var cachedOtp = await _cache.GetStringAsync(GetCacheKey(optDto.Email));
-            if (cachedOtp == null || cachedOtp != optDto.Otp) return null;
+            await _cache.RemoveAsync($"otp:{optDto.Otp}");
 
-            await _cache.RemoveAsync(GetCacheKey(optDto.Email));
+            // Generate reset password token
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            // Store token -> email
+            await _cache.SetStringAsync($"reset:{resetToken}", cachedEmail,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+                });
 
             return new ResetPasswordResultDto
             {
-                UserID = user.Id,
-                Email = user.Email,
-                Token = token
+                Token = resetToken
             };
         }
 
@@ -205,10 +219,34 @@ namespace CarWare.Application.Services
                 });
             }
 
-            var user = await _userManager.FindByIdAsync(resetDto.UserId);
-            if (user == null) return IdentityResult.Success;
+            // Get Email from token
+            var email = await _cache.GetStringAsync($"reset:{resetDto.Token}");
+            if (email == null)
+            {
+                return IdentityResult.Failed(new IdentityError
+                {
+                    Code = "TokenInvalidOrExpired",
+                    Description = "The password reset token is invalid or has expired."
+                });
+            }
 
-            return await _userManager.ResetPasswordAsync(user, resetDto.Token, resetDto.NewPassword);
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return IdentityResult.Failed(new IdentityError
+                {
+                    Code = "UserNotFound",
+                    Description = "User not found."
+                });
+            }
+
+            // Reset
+            var result = await _userManager.ResetPasswordAsync(user, resetDto.Token, resetDto.NewPassword);
+
+            if (result.Succeeded)
+                await _cache.RemoveAsync($"reset:{resetDto.Token}");
+
+            return result;
         }
 
         public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
@@ -280,10 +318,5 @@ namespace CarWare.Application.Services
             await _signInManager.SignOutAsync();
             return new OkObjectResult(new { message = "Logged out successfully" });
         }
-
-        /*//public Task<AuthDto> LoginWithGoogleAsync(string googleToken)
-        {
-            throw new NotImplementedException();
-        }*/
     }
 }
