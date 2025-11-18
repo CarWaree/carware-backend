@@ -27,7 +27,7 @@ namespace CarWare.Infrastructure.Context
             builder.Entity<Vehicle>()
             .HasOne(c => c.user)           
             .WithMany(c => c.vehicles)                     
-            .HasForeignKey(c => c.userId)  
+            .HasForeignKey(c => c.UserId)  
             .OnDelete(DeleteBehavior.Cascade);
         }
 
