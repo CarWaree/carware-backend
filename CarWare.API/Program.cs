@@ -1,5 +1,4 @@
-using AutoMapper;
-using CarWare.API.Middlewares;
+﻿using CarWare.API.Middlewares;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Services;
 using CarWare.Domain;

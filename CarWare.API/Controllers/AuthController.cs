@@ -32,7 +32,7 @@ namespace CarWare.API.Controllers
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
-            return Ok(ApiResponseGeneric<AuthDto>.Success(result.Data));
+            return Ok(ApiResponseGeneric<AuthDto>.Success(result.Data, "Registration successful"));
         }
 
         //[Authorize]
@@ -42,7 +42,7 @@ namespace CarWare.API.Controllers
             var result = await _authService.LoginAsync(dto);
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
-            return Ok(ApiResponseGeneric<AuthDto>.Success(result.Data));
+            return Ok(ApiResponseGeneric<AuthDto>.Success(result.Data, "Login successful"));
         }
 
         [HttpPost("forgot-password")]

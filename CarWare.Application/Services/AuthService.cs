@@ -94,13 +94,13 @@ namespace CarWare.Application.Services
 
         public async Task<Result<AuthDto>> RegisterAsync(RegisterDto model)
         {
-            var existingEmail = await _userManager.FindByEmailAsync(model.Email);
-            if (existingEmail != null)
-                return Result<AuthDto>.Fail("Emial is already Registered!");
-
             var existingUser = await _userManager.FindByNameAsync(model.Username);
             if (existingUser != null)
                 return Result<AuthDto>.Fail("Username is already taken!");
+
+            var existingEmail = await _userManager.FindByEmailAsync(model.Email);
+            if (existingEmail != null)
+                return Result<AuthDto>.Fail("Emial is already Registered!");
 
             var user = _mapper.Map<ApplicationUser>(model);
 
@@ -121,7 +121,6 @@ namespace CarWare.Application.Services
             authDto.Roles = rolesList.ToList();
             authDto.Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
             authDto.ExpiresOn = jwtSecurityToken.ValidTo;
-            authDto.Message = "Registration successful";
 
             return Result<AuthDto>.Ok(authDto);
         }
@@ -146,8 +145,7 @@ namespace CarWare.Application.Services
                 LastName = user.LastName,
                 Roles = rolesList.ToList(),
                 Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken),
-                ExpiresOn = jwtSecurityToken.ValidTo,
-                Message = "Login successful"
+                ExpiresOn = jwtSecurityToken.ValidTo
             };
 
             return Result<AuthDto>.Ok(authDto);
