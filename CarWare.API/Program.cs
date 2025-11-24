@@ -104,6 +104,7 @@ namespace CarWare.API
             var app = builder.Build();
 
             //update Database 
+
             using var scope = app.Services.CreateScope();
             var service = scope.ServiceProvider;
             var _dbcontext = service.GetRequiredService<ApplicationDbContext>();
