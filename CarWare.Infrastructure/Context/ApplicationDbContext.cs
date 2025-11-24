@@ -2,12 +2,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.ConstrainedExecution;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CarWare.Infrastructure.Context
 {
@@ -18,6 +12,7 @@ namespace CarWare.Infrastructure.Context
         public ApplicationDbContext() { }
 
         public DbSet<Vehicle> vehicles { get; set; }
+        public DbSet<Maintenance> maintenances { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -29,6 +24,17 @@ namespace CarWare.Infrastructure.Context
             .WithMany(c => c.vehicles)                     
             .HasForeignKey(c => c.UserId)  
             .OnDelete(DeleteBehavior.Cascade);
+
+
+            builder.Entity<Maintenance>()
+            .HasOne(c => c.Vehicle)
+            .WithMany(c => c.maintenances)
+            .HasForeignKey(c => c.VehicleId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Maintenance>()
+            .Property(m => m.TypeOfMaintenance)
+            .HasConversion<string>();
         }
 
         /*protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

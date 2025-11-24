@@ -79,23 +79,16 @@ namespace CarWare.API.Controllers
             return Ok(ApiResponse.Success("Password reset successfully"));
         }
 
-        [HttpGet("external-login")]
-        public IActionResult ExternalLogin(string provider, string? returnUrl = null)
+        [HttpGet("google-login")]
+        public IActionResult GoogleLogin(string? returnUrl = null)
         {
-            var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, returnUrl);
-            return new ChallengeResult(provider, properties);
+            return _authService.GoogleLogin(returnUrl);
         }
 
-        [HttpGet("external-login-callback")]
-        public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
+        [HttpGet("google-callback")]
+        public async Task<IActionResult> GoogleCallback([FromQuery] string? returnUrl = null, [FromQuery] string? remoteError = null)
         {
-            return await _authService.ExternalLoginCallback(returnUrl, remoteError);
-        }
-
-        [HttpPost("Logout")]
-        public async Task<IActionResult> Logout()
-        {
-            return await _authService.Logout();
+            return await _authService.GoogleCallback(returnUrl, remoteError);
         }
     }
 }

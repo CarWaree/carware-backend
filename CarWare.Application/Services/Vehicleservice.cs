@@ -1,4 +1,5 @@
-﻿using CarWare.Application.DTOs.Vehicle;
+﻿using AutoMapper;
+using CarWare.Application.DTOs.Vehicle;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
@@ -14,41 +15,67 @@ namespace CarWare.Application.Services
     {
 
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public Vehicleservice(IUnitOfWork unitOfWork)
+        public Vehicleservice(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
-        public async Task<bool> DeleteVehicleAsync(int id)
+        // Get all vehicles
+        public async Task<IEnumerable<VehicleDTOs>> GetAllVehiclesAsync()
         {
             var repo = _unitOfWork.Repository<Vehicle>();
+            var vehicles = await repo.GetAllAsync();
+            return _mapper.Map<IEnumerable<VehicleDTOs>>(vehicles);
+        }
 
+        // Get vehicle by ID
+        public async Task<VehicleDTOs> GetVehicleByIdAsync(int id)
+        {
+            var repo = _unitOfWork.Repository<Vehicle>();
             var vehicle = await repo.GetByIdAsync(id);
-            if (vehicle == null)
-                return false;
+            if (vehicle == null) return null;
 
-            repo.Delete(vehicle);
+            return _mapper.Map<VehicleDTOs>(vehicle);
+        }
+
+        // Add new vehicle
+        public async Task<VehicleDTOs> AddVehicleAsync(VehicleDTOs dto)
+        {
+            var repo = _unitOfWork.Repository<Vehicle>();
+            var vehicle = _mapper.Map<Vehicle>(dto);
+
+            await repo.AddAsync(vehicle);
+            await _unitOfWork.CompleteAsync();
+
+            return _mapper.Map<VehicleDTOs>(vehicle);
+        }
+
+        // Update vehicle
+        public async Task<bool> UpdateVehicleAsync(VehicleDTOs dto)
+        {
+            var repo = _unitOfWork.Repository<Vehicle>();
+            var vehicle = await repo.GetByIdAsync(dto.Id);
+            if (vehicle == null) return false;
+
+            _mapper.Map(dto, vehicle);
+
+            repo.Update(vehicle);
             await _unitOfWork.CompleteAsync();
 
             return true;
         }
 
-        public async Task<bool> UpdateVehicleAsync(VehicleDTOs dto)
+        // Delete vehicle
+        public async Task<bool> DeleteVehicleAsync(int id)
         {
             var repo = _unitOfWork.Repository<Vehicle>();
+            var vehicle = await repo.GetByIdAsync(id);
+            if (vehicle == null) return false;
 
-            var vehicle = await repo.GetByIdAsync(dto.Id);
-            if (vehicle == null)
-                return false;
-
-            
-            vehicle.Brand = dto.Brand;
-            vehicle.Model = dto.Model;
-            vehicle.Year = dto.Year;
-            vehicle.Color = dto.Color;
-
-            repo.Update(vehicle);
+            repo.Delete(vehicle);
             await _unitOfWork.CompleteAsync();
 
             return true;
