@@ -1,4 +1,6 @@
-﻿using CarWare.Application.DTOs.Auth;
+﻿using CarWare.API.Errors;
+using CarWare.API.Errors.NonGeneric;
+using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using Microsoft.AspNetCore.Authentication;
@@ -27,9 +29,10 @@ namespace CarWare.API.Controllers
         public async Task<IActionResult> Register(RegisterDto dto)
         {
             var result = await _authService.RegisterAsync(dto);
-            if (!result.IsAuthenticated)
-                return BadRequest(result.Message);
-            return Ok(result);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error));
+            return Ok(ApiResponseGeneric<AuthDto>.Success(result.Data, "Registration successful"));
         }
 
         //[Authorize]
@@ -37,38 +40,43 @@ namespace CarWare.API.Controllers
         public async Task<IActionResult> Login(LoginDto dto)
         {
             var result = await _authService.LoginAsync(dto);
-            if (!result.IsAuthenticated)
-                return BadRequest(result.Message);
-            return Ok(result);
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error));
+            return Ok(ApiResponseGeneric<AuthDto>.Success(result.Data, "Login successful"));
         }
 
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPasswordAsync([FromBody]ForgetPasswordDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Email))
-                return BadRequest(new { success = false, message = "Email is required." });
+                return BadRequest(ApiResponse.Fail("Email is required."));
 
             var result =  await _authService.RequestResetAsync(dto);
 
-            return Ok(new
-            {
-                success = true,
-                message = "If your email is registered, you will receive a verification code shortly."
-            });
+            return Ok(ApiResponse.Success("Check your email for the verification code"));
         }
 
         [HttpPost("Verify-Otp")]
         public async Task<IActionResult> VerifyOtpAsync([FromBody]VerifyOtpDto dto)
         {
             var result = await _authService.VerifyOtpAsync(dto);
-            return result == null ? BadRequest("Invalid or expired OTP") : Ok(result);
+            if (result == null)
+                return BadRequest(ApiResponse.Fail("Invalid or expired OTP"));
+
+            return Ok(ApiResponseGeneric<ResetPasswordResultDto>.Success(
+                    data: result.Data!,
+                    message: "OTP verified successfully"
+            ));
         }
 
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPasswordAsync([FromBody] ResetPasswordDto dto)
         {
             var result = await _authService.ResetPasswordAsync(dto);
-            return result.Succeeded ? Ok("Password reset successfully"): BadRequest(result.Errors);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error!));
+            return Ok(ApiResponse.Success("Password reset successfully"));
         }
 
         [HttpGet("external-login")]

@@ -1,5 +1,4 @@
-using AutoMapper;
-using CarWare.API.Middlewares;
+﻿using CarWare.API.Middlewares;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Services;
 using CarWare.Domain;
@@ -9,6 +8,7 @@ using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
 using CarWare.Infrastructure.UnitOfWork;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -81,6 +81,7 @@ namespace CarWare.API
             {
                 options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
                 options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
+                options.CallbackPath = "/external-login-callback"; 
             });
 
             //Memory Cashe
@@ -100,6 +101,21 @@ namespace CarWare.API
             //builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             //builder.Services.AddAutoMapper(typeof(AuthProfile));
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
+
+            //CORS
+            var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy(name: MyAllowSpecificOrigins,
+                                  policy =>
+                                  {
+                                      policy.WithOrigins("https://localhost:3000", "http://localhost:3000") // your frontend URLs
+                                            .AllowAnyHeader()
+                                            .AllowAnyMethod()
+                                            .AllowCredentials(); // needed if using cookies/auth
+                                  });
+            });
 
             var app = builder.Build();
 
@@ -135,6 +151,8 @@ namespace CarWare.API
                 app.UseSwaggerUI();
             }
             app.UseHttpsRedirection();
+
+            app.UseCors(MyAllowSpecificOrigins);
 
             app.UseAuthentication();
             app.UseAuthorization();

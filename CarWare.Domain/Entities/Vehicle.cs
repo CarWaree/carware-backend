@@ -16,7 +16,7 @@ namespace CarWare.Domain.Entities
         [Required]
         public int Year { get; set; }
         public string Color { get; set; }
-        public string userId { get; set; }
+        public string UserId { get; set; }
         public ApplicationUser user { get; set; }
     }
 }

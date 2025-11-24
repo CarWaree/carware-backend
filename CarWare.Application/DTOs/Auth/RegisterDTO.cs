@@ -11,6 +11,7 @@ namespace CarWare.Application.DTOs.Auth
         public string Username { get; set; }
 
         [Required(ErrorMessage = "Email is required")]
+        [RegularExpression(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Invalid email format")]
         [DataType(DataType.EmailAddress)]
         public string Email { get; set; }       
 

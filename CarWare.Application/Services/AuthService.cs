@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using CarWare.Application.Common;
 using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
@@ -10,9 +11,11 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -89,15 +92,15 @@ namespace CarWare.Application.Services
             return jwtSecurityToken;
         }
 
-        public async Task<AuthDto> RegisterAsync(RegisterDto model)
+        public async Task<Result<AuthDto>> RegisterAsync(RegisterDto model)
         {
-            var existingEmail = await _userManager.FindByEmailAsync(model.Email);
-            if (existingEmail != null)
-                return new AuthDto { Message = "Email is already registered!", IsAuthenticated = false };
-
             var existingUser = await _userManager.FindByNameAsync(model.Username);
             if (existingUser != null)
-                return new AuthDto { Message = "Username is already taken!", IsAuthenticated = false };
+                return Result<AuthDto>.Fail("Username is already taken!");
+
+            var existingEmail = await _userManager.FindByEmailAsync(model.Email);
+            if (existingEmail != null)
+                return Result<AuthDto>.Fail("Emial is already Registered!");
 
             var user = _mapper.Map<ApplicationUser>(model);
 
@@ -105,7 +108,7 @@ namespace CarWare.Application.Services
             if (!result.Succeeded)
             {
                 var errors = string.Join(",", result.Errors.Select(e => e.Description));
-                return new AuthDto { Message = errors, IsAuthenticated = false };
+                return Result<AuthDto>.Fail(errors);
             }
 
             await _userManager.AddToRoleAsync(user, "User");
@@ -118,23 +121,22 @@ namespace CarWare.Application.Services
             authDto.Roles = rolesList.ToList();
             authDto.Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
             authDto.ExpiresOn = jwtSecurityToken.ValidTo;
-            authDto.Message = "Registration successful";
 
-            return authDto;
+            return Result<AuthDto>.Ok(authDto);
         }
 
-        public async Task<AuthDto> LoginAsync(LoginDto loginDto)
+        public async Task<Result<AuthDto>> LoginAsync(LoginDto loginDto)
          {
             var user = await _userManager.FindByEmailAsync(loginDto.EmailOrUsername)
                 ?? await _userManager.FindByNameAsync(loginDto.EmailOrUsername);
 
             if (user is null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
-                return new AuthDto { Message = "Invalid email or password" };
+                return Result<AuthDto>.Fail("Invalid Username or Password");
 
             var jwtSecurityToken = await CreateJwtToken(user);
             var rolesList = await _userManager.GetRolesAsync(user);
 
-            return new AuthDto
+            var authDto = new AuthDto
             {
                 IsAuthenticated = true,
                 Username = user.UserName,
@@ -143,72 +145,103 @@ namespace CarWare.Application.Services
                 LastName = user.LastName,
                 Roles = rolesList.ToList(),
                 Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken),
-                ExpiresOn = jwtSecurityToken.ValidTo,
-                Message = "Login successful"
+                ExpiresOn = jwtSecurityToken.ValidTo
             };
 
+            return Result<AuthDto>.Ok(authDto);
          }
 
-        public async Task<bool> RequestResetAsync(ForgetPasswordDto forgetDTO)
+        public async Task<Result<bool>> RequestResetAsync(ForgetPasswordDto forgetDTO)
         {
-            var user = await _userManager.FindByEmailAsync(forgetDTO.Email);
+            var email = forgetDTO.Email.Trim().ToUpper();
+            var user = await _userManager.FindByEmailAsync(email);
 
-            //if (user == null || !(await _userManager.IsEmailConfirmedAsync(user))) return true;
+            if (user == null) return Result<bool>.Ok(true);
 
-            //generate and store OTP code (6 digits)
-            var cacheKey = GetCacheKey(forgetDTO.Email);
-            var otpCode = new Random().Next(100000, 999999).ToString();
-            var cacheOptions = new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
-            };
+            // Generate OTP
+            var otpBytes = new byte[4];
+            using (var rng = RandomNumberGenerator.Create())
+                rng.GetBytes(otpBytes);
 
-            //store the OTP in Distributed Cache with Expiration time
-            await _cache.SetStringAsync(cacheKey, otpCode, cacheOptions);
+            var otpCode = (BitConverter.ToUInt32(otpBytes, 0) % 900000 + 100000).ToString();
 
-            //send email with OTP
-            await _emailSender.SendEmailAsync(forgetDTO.Email, 
+            var cacheKey = $"otp:{otpCode}";
+
+            await _cache.SetStringAsync(cacheKey, email,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
+                });
+
+            // Send email
+            await _emailSender.SendEmailAsync(
+                forgetDTO.Email,
                 "Password Reset Code",
-                $"Your verification code is <b>{otpCode}</b>. It expires in 3 minutes.");
+                $"Your verification code is <b>{otpCode}</b>. It expires in 3 minutes."
+            );
 
-            return true;
+            return Result<bool>.Ok(true);
         }
 
-        public async Task<ResetPasswordResultDto> VerifyOtpAsync(VerifyOtpDto optDto)
+        public async Task<Result<ResetPasswordResultDto>> VerifyOtpAsync(VerifyOtpDto optDto)
         {
-            var user = await _userManager.FindByEmailAsync(optDto.Email);
-            if (user == null) return null;
+            var cachedEmail = await _cache.GetStringAsync($"otp:{optDto.Otp}");
+            if (cachedEmail == null)
+                return Result<ResetPasswordResultDto>.Fail("Invalid or expired OTP");
 
-            var cachedOtp = await _cache.GetStringAsync(GetCacheKey(optDto.Email));
-            if (cachedOtp == null || cachedOtp != optDto.Otp) return null;
+            var user = await _userManager.FindByEmailAsync(cachedEmail);
+            if (user == null)
+                return Result<ResetPasswordResultDto>.Fail("User not found");
 
-            await _cache.RemoveAsync(GetCacheKey(optDto.Email));
+            await _cache.RemoveAsync($"otp:{optDto.Otp}");
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            // Generate reset password token
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-            return new ResetPasswordResultDto
-            {
-                UserID = user.Id,
-                Email = user.Email,
-                Token = token
-            };
+            // Store token -> email
+            await _cache.SetStringAsync($"reset:{resetToken}", cachedEmail,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+                });
+
+            return Result<ResetPasswordResultDto>.Ok(
+                new ResetPasswordResultDto { Token = resetToken }
+            );
         }
 
-        public async Task<IdentityResult> ResetPasswordAsync(ResetPasswordDto resetDto)
+        public async Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto resetDto)
         {
             if (resetDto.NewPassword != resetDto.ConfirmPassword)
             {
-                return IdentityResult.Failed(new IdentityError
-                {
-                    Code = "PasswordMismatch",
-                    Description = "New password and confirmation do not match."
-                });
+                return Result<bool>.Fail("New Password and Confirmation do not match");
             }
 
-            var user = await _userManager.FindByIdAsync(resetDto.UserId);
-            if (user == null) return IdentityResult.Success;
+            // Get Email from token
+            var email = await _cache.GetStringAsync($"reset:{resetDto.Token}");
+            if (email == null)
+            {
+                return Result<bool>.Fail("The password reset token is invalid or has expired.");
+            }
 
-            return await _userManager.ResetPasswordAsync(user, resetDto.Token, resetDto.NewPassword);
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return Result<bool>.Fail("User not found.");
+            }
+
+            // Reset
+            var result = await _userManager.ResetPasswordAsync(user, resetDto.Token, resetDto.NewPassword);
+
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                return Result<bool>.Fail(errors);
+            }
+
+            await _cache.RemoveAsync($"reset:{resetDto.Token}");
+
+            return Result<bool>.Ok(true);
         }
 
         public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
@@ -280,10 +313,5 @@ namespace CarWare.Application.Services
             await _signInManager.SignOutAsync();
             return new OkObjectResult(new { message = "Logged out successfully" });
         }
-
-        /*//public Task<AuthDto> LoginWithGoogleAsync(string googleToken)
-        {
-            throw new NotImplementedException();
-        }*/
     }
 }
