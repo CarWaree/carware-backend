@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CarWare.Domain.Entities
 {
@@ -18,5 +15,6 @@ namespace CarWare.Domain.Entities
         public string Color { get; set; }
         public string UserId { get; set; }
         public ApplicationUser user { get; set; }
+        public ICollection<Maintenance> maintenances { get; set; }
     }
 }

@@ -4,6 +4,10 @@ using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
@@ -126,7 +130,7 @@ namespace CarWare.Application.Services
         }
 
         public async Task<Result<AuthDto>> LoginAsync(LoginDto loginDto)
-         {
+        {
             var user = await _userManager.FindByEmailAsync(loginDto.EmailOrUsername)
                 ?? await _userManager.FindByNameAsync(loginDto.EmailOrUsername);
 
@@ -149,7 +153,7 @@ namespace CarWare.Application.Services
             };
 
             return Result<AuthDto>.Ok(authDto);
-         }
+        }
 
         public async Task<Result<bool>> RequestResetAsync(ForgetPasswordDto forgetDTO)
         {
@@ -195,43 +199,46 @@ namespace CarWare.Application.Services
 
             await _cache.RemoveAsync($"otp:{optDto.Otp}");
 
-            // Generate reset password token
+            // Generate Identity reset token
             var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-            // Store token -> email
-            await _cache.SetStringAsync($"reset:{resetToken}", cachedEmail,
-                new DistributedCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
-                });
+            // Create a short handle (GUID)
+            var handle = Guid.NewGuid().ToString("N");
 
-            return Result<ResetPasswordResultDto>.Ok(
-                new ResetPasswordResultDto { Token = resetToken }
-            );
+            // Store mapping: handle -> actual resetToken (consider encrypting if you want)
+            await _cache.SetStringAsync($"reset_handle:{handle}", resetToken,
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) });
+
+            // Store also handle -> email if you want quick lookup or extra validation
+            await _cache.SetStringAsync($"reset_handle_email:{handle}", cachedEmail,
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) });
+
+            // Return handle to client (short and safe)
+            return Result<ResetPasswordResultDto>.Ok(new ResetPasswordResultDto { Token = handle });
         }
 
         public async Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto resetDto)
         {
             if (resetDto.NewPassword != resetDto.ConfirmPassword)
-            {
                 return Result<bool>.Fail("New Password and Confirmation do not match");
-            }
 
-            // Get Email from token
-            var email = await _cache.GetStringAsync($"reset:{resetDto.Token}");
-            if (email == null)
-            {
+            // The client sends the handle (not the real Identity token)
+            var handle = resetDto.Token;
+            if (string.IsNullOrWhiteSpace(handle))
+                return Result<bool>.Fail("Token is required.");
+
+            // Retrieve the real reset token from cache
+            var realResetToken = await _cache.GetStringAsync($"reset_handle:{handle}");
+            var email = await _cache.GetStringAsync($"reset_handle_email:{handle}");
+            if (realResetToken == null || email == null)
                 return Result<bool>.Fail("The password reset token is invalid or has expired.");
-            }
 
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
-            {
                 return Result<bool>.Fail("User not found.");
-            }
 
-            // Reset
-            var result = await _userManager.ResetPasswordAsync(user, resetDto.Token, resetDto.NewPassword);
+            // Use the real Identity token
+            var result = await _userManager.ResetPasswordAsync(user, realResetToken, resetDto.NewPassword);
 
             if (!result.Succeeded)
             {
@@ -239,79 +246,66 @@ namespace CarWare.Application.Services
                 return Result<bool>.Fail(errors);
             }
 
-            await _cache.RemoveAsync($"reset:{resetDto.Token}");
+            // remove from cache (invalidate handle)
+            await _cache.RemoveAsync($"reset_handle:{handle}");
+            await _cache.RemoveAsync($"reset_handle_email:{handle}");
 
             return Result<bool>.Ok(true);
         }
 
-        public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
+        public IActionResult GoogleLogin(string? returnUrl = null)
+        {
+            var redirectUrl = "/api/auth/google-callback?returnUrl=" + returnUrl;
+
+            var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+
+            return new ChallengeResult("Google", props);
+        }
+
+        public async Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null)
         {
             if (remoteError != null)
-                return new BadRequestObjectResult(new { message = $"Error from external provider: {remoteError}" });
+                return new BadRequestObjectResult(new { error = remoteError });
 
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
-                return new BadRequestObjectResult(new { message = "External login information not found." });
+                return new BadRequestObjectResult(new { error = "Error loading external login info" });
 
-            var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
+            var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, false);
 
-            if (result.Succeeded)
+            ApplicationUser user;
+
+            if (!signInResult.Succeeded)
             {
-                var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-                var role = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
-                return new OkObjectResult(new
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+
+                user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
                 {
-                    message = "Login successful",
-                    user = new { user.Id, user.Email, Role = role }
-                });
+                    user = new ApplicationUser
+                    {
+                        Email = email,
+                        UserName = email,
+                    };
+
+                    await _userManager.CreateAsync(user);
+                }
+
+                await _userManager.AddLoginAsync(user, info);
+            }
+            else
+            {
+                user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
             }
 
-            // Create user if not exist
-            var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-            if (email == null)
-                return new BadRequestObjectResult(new { message = "Email claim not provided by external provider." });
-
-            var existingUser = await _userManager.FindByEmailAsync(email);
-            if (existingUser == null)
-            {
-                var newUser = new ApplicationUser
-                {
-                    UserName = email,
-                    Email = email
-                };
-
-                var createResult = await _userManager.CreateAsync(newUser);
-                if (!createResult.Succeeded)
-                    return new BadRequestObjectResult(createResult.Errors);
-
-                await _userManager.AddToRoleAsync(newUser, "Admin");
-                await _userManager.AddLoginAsync(newUser, info);
-                await _signInManager.SignInAsync(newUser, isPersistent: false);
-
-                return new OkObjectResult(new
-                {
-                    message = "User created and logged in successfully",
-                    user = new { newUser.Id, newUser.Email, Role = "Admin" }
-                });
-            }
-
-            // Link login to existing user
-            await _userManager.AddLoginAsync(existingUser, info);
-            await _signInManager.SignInAsync(existingUser, isPersistent: false);
-
-            var existingUserRole = (await _userManager.GetRolesAsync(existingUser)).FirstOrDefault();
+            var jwtToken = await CreateJwtToken(user);
+            var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
 
             return new OkObjectResult(new
             {
-                message = "External login linked successfully",
-                user = new { existingUser.Id, existingUser.Email, Role = existingUserRole }
+                message = "Google Login Successful",
+                token
             });
-        }
-
-        public async Task<IActionResult> Logout()
-        {
-            await _signInManager.SignOutAsync();
-            return new OkObjectResult(new { message = "Logged out successfully" });
         }
     }
 }
