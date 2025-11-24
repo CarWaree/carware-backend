@@ -14,85 +14,56 @@ namespace CarWare.API.Controllers
     [ApiController]
     public class VehicleController : ControllerBase
     {
-        
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
         private readonly IVehicleService _vehicleService;
 
-        public VehicleController(IUnitOfWork unitOfWork, IMapper mapper, IVehicleService vehicleService)
+        public VehicleController(IVehicleService vehicleService)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
             _vehicleService = vehicleService;
         }
 
-        //Get All
-
+        // GET: api/vehicle
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<VehicleDTOs>>> GetAll() {
-            var vehicleRepo = _unitOfWork.Repository<Vehicle>();
-            var vehicles = await vehicleRepo.GetAllAsync();
-            return Ok(_mapper.Map<IEnumerable<Vehicle>,IEnumerable<VehicleDTOs>>(vehicles));
+        public async Task<ActionResult<IEnumerable<VehicleDTOs>>> GetAll()
+        {
+            var vehicles = await _vehicleService.GetAllVehiclesAsync();
+            return Ok(vehicles);
         }
-        //GetById
 
+        // GET: api/vehicle/5
         [HttpGet("{id}")]
         public async Task<ActionResult<VehicleDTOs>> GetById(int id)
         {
-            var vehicleRepo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = await vehicleRepo.GetByIdAsync(id);
-            if (vehicle == null)
-            {
-                return NotFound();
-            }
-            return Ok(_mapper.Map<Vehicle, VehicleDTOs>(vehicle));
-
+            var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
+            if (vehicle == null) return NotFound("Vehicle not found");
+            return Ok(vehicle);
         }
-        //Add
 
+        // POST: api/vehicle
         [HttpPost]
-        public async Task<ActionResult> AddVehicle([FromBody] VehicleDTOs dto)
+        public async Task<ActionResult<VehicleDTOs>> AddVehicle([FromBody] VehicleDTOs dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var vehicleRepo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = _mapper.Map<Vehicle>(dto);
-
-            await vehicleRepo.AddAsync(vehicle);
-            await _unitOfWork.CompleteAsync();
-
-            return Ok(_mapper.Map<VehicleDTOs>(vehicle));
+            var createdVehicle = await _vehicleService.AddVehicleAsync(dto);
+            return Ok(createdVehicle);
         }
-        
-        //UPDATE
 
+        // PUT: api/vehicle/5
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateVehicle(int id, [FromBody] VehicleDTOs dto)
         {
             dto.Id = id;
-
             var updated = await _vehicleService.UpdateVehicleAsync(dto);
-
-            if (!updated)
-                return NotFound("Vehicle not found");
-
+            if (!updated) return NotFound("Vehicle not found");
             return Ok("Vehicle updated successfully");
         }
 
-        //DELETE
-
+        // DELETE: api/vehicle/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVehicle(int id)
         {
             var deleted = await _vehicleService.DeleteVehicleAsync(id);
-
-            if (!deleted)
-                return NotFound("Vehicle not found");
-
+            if (!deleted) return NotFound("Vehicle not found");
             return Ok("Vehicle deleted successfully");
         }
-
-
     }
+
 }

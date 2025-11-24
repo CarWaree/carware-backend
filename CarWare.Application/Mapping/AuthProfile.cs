@@ -22,6 +22,6 @@ public class AuthProfile : Profile
             .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
             .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName));
 
-        CreateMap<Vehicle,VehicleDTOs>().ReverseMap();
+       
     }
 }
