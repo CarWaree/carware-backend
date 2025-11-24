@@ -3,10 +3,7 @@ using CarWare.Application.DTOs.Vehicle;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
@@ -24,11 +21,9 @@ namespace CarWare.Application.Services
         }
 
         // Get all vehicles
-        public async Task<IEnumerable<VehicleDTOs>> GetAllVehiclesAsync()
+        public IQueryable<Vehicle> QueryVehicles()
         {
-            var repo = _unitOfWork.Repository<Vehicle>();
-            var vehicles = await repo.GetAllAsync();
-            return _mapper.Map<IEnumerable<VehicleDTOs>>(vehicles);
+            return _unitOfWork.Repository<Vehicle>().Query();
         }
 
         // Get vehicle by ID
@@ -80,7 +75,5 @@ namespace CarWare.Application.Services
 
             return true;
         }
-
-
     }
 }

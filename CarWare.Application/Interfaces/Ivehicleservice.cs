@@ -1,4 +1,5 @@
 ﻿using CarWare.Application.DTOs.Vehicle;
+using CarWare.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,18 +10,10 @@ namespace CarWare.Application.Interfaces
 {
     public interface IVehicleService
     {
-        Task<IEnumerable<VehicleDTOs>> GetAllVehiclesAsync();
-
-        // Get a vehicle by ID
+        IQueryable<Vehicle> QueryVehicles();
         Task<VehicleDTOs> GetVehicleByIdAsync(int id);
-
-        // Add a new vehicle
         Task<VehicleDTOs> AddVehicleAsync(VehicleDTOs dto);
-
-        // Update a vehicle
         Task<bool> UpdateVehicleAsync(VehicleDTOs dto);
-
-        // Delete a vehicle
         Task<bool> DeleteVehicleAsync(int id);
     }
 }
