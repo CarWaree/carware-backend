@@ -1,12 +1,20 @@
 ﻿using AutoMapper;
+
 using CarWare.Application.DTOs.Vehicle;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Services;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
+using CarWare.Domain.helper;
 using CarWare.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using AutoMapper.QueryableExtensions;
+
+using CarWare.Application.Common;
+using CarWare.Application.helper;
+
+
 
 namespace CarWare.API.Controllers
 {
@@ -29,10 +37,15 @@ namespace CarWare.API.Controllers
         //Get All
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<VehicleDTOs>>> GetAll() {
-            var vehicleRepo = _unitOfWork.Repository<Vehicle>();
-            var vehicles = await vehicleRepo.GetAllAsync();
-            return Ok(_mapper.Map<IEnumerable<Vehicle>,IEnumerable<VehicleDTOs>>(vehicles));
+        public async Task<ActionResult<Pagination<VehicleDTOs>>> GetAll([FromQuery] PaginationParameters @params ){
+            var query = _unitOfWork.Repository<Vehicle>().Query();
+ 
+            var pagedVehicles = await query.ProjectTo<VehicleDTOs>(_mapper.ConfigurationProvider)
+                                  .ToPagedList(@params.PageIndex, @params.PageSize);
+
+
+
+            return Ok(pagedVehicles);
         }
         //GetById
 

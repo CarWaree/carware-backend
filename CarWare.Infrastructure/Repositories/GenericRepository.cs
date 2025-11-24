@@ -46,6 +46,11 @@ namespace CarWare.Infrastructure.Repositories
             return await _dbSet.FindAsync(Id);
         }
 
+        public IQueryable<T> Query()
+        {
+            return _context.Set<T>().AsQueryable();
+        }
+
         public void Update(T entity)
         {
             _dbSet.Update(entity);
