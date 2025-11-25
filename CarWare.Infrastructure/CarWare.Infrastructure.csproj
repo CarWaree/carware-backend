@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
@@ -14,5 +14,13 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CarWare.Domain\CarWare.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="DataSeed\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="DataSeed\egypt_car_brands_models.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

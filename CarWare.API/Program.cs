@@ -5,6 +5,7 @@ using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
 using CarWare.Domain.Interfaces;
+using CarWare.Infrastructure;
 using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
 using CarWare.Infrastructure.UnitOfWork;
@@ -119,24 +120,30 @@ namespace CarWare.API
 
             var app = builder.Build();
 
-            //update Database 
-
+            // ✅ Update database + Run seeders
             using var scope = app.Services.CreateScope();
-            var service = scope.ServiceProvider;
-            var _dbcontext = service.GetRequiredService<ApplicationDbContext>();
-
-            var LoggerFactory = service.GetRequiredService<ILoggerFactory>();
+            var services = scope.ServiceProvider;
 
             try
             {
-                await _dbcontext.Database.MigrateAsync();
+                var context = services.GetRequiredService<ApplicationDbContext>();
+                var logger = services.GetRequiredService<ILogger<Program>>();
+
+                // ✅ Apply pending migrations
+                await context.Database.MigrateAsync();
+
+                // ✅ Run vehicle seeder (using your JSON file)
+                await StoreContextSeed.SeedAsync(context);
+
+                logger.LogInformation("Database migrated & seeded successfully ");
             }
             catch (Exception ex)
             {
-
-                var logger = LoggerFactory.CreateLogger<Program>();
-                logger.LogError(ex, "error during migration");
+                var logger = services.GetRequiredService<ILogger<Program>>();
+                logger.LogError(ex, " Error during migration or seeding");
             }
+
+           
 
             //Create roles when the app starts
             await CreateRolesAsync(app);
