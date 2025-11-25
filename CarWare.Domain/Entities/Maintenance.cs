@@ -4,10 +4,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CarWare.Domain.Entities
 {
-    public class Maintenance
+    public class Maintenance:BaseEntity
     {
-        [Key]
-        public int Maintenance_Id { get; set; }
+       
         public TypeOfMaintenance TypeOfMaintenance { get; set; }
         [Required]
         public DateTime NotificationDate { get; set; }
