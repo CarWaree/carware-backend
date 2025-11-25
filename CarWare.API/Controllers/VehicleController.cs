@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using AutoMapper.QueryableExtensions;
 using CarWare.Application.Common;
 using CarWare.Application.helper;
+using CarWare.API.Errors;
+using CarWare.API.Errors.NonGeneric;
 
 namespace CarWare.API.Controllers
 {
@@ -22,7 +24,6 @@ namespace CarWare.API.Controllers
             _mapper = mapper;
         }
 
-        // GET: api/vehicle
         [HttpGet]
         public async Task<ActionResult<Pagination<VehicleDTOs>>> GetAll([FromQuery] PaginationParameters @params ){
             var query = _vehicleService.QueryVehicles();
@@ -31,44 +32,60 @@ namespace CarWare.API.Controllers
                 .ProjectTo<VehicleDTOs>(_mapper.ConfigurationProvider)
                 .ToPagedList(@params.PageIndex, @params.PageSize);
 
-            return Ok(pagedVehicles);
+            return Ok(ApiResponseGeneric<Pagination<VehicleDTOs>>.Success(
+                pagedVehicles, "Vehicles retrieved successfully"
+            ));
         }
 
-        // GET: api/vehicle/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<VehicleDTOs>> GetById(int id)
+        public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> GetById(int id)
         {
-            var vehicle = await _vehicleService.GetVehicleByIdAsync(id);
-            if (vehicle == null) return NotFound("Vehicle not found");
-            return Ok(vehicle);
+            var result = await _vehicleService.GetVehicleByIdAsync(id);
+
+            if (!result.Success)
+                return NotFound(ApiResponse.Fail(result.Error!, 404));
+
+            return Ok(ApiResponseGeneric<VehicleDTOs>.Success(
+                result.Data,
+                "Vehicle retrieved successfully"
+            ));
         }
 
-        // POST: api/vehicle
         [HttpPost]
-        public async Task<ActionResult<VehicleDTOs>> AddVehicle([FromBody] VehicleDTOs dto)
+        public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> AddVehicle([FromBody] VehicleDTOs dto)
         {
-            var createdVehicle = await _vehicleService.AddVehicleAsync(dto);
-            return Ok(createdVehicle);
+            var result = await _vehicleService.AddVehicleAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error!));
+
+            return Ok(ApiResponseGeneric<VehicleDTOs>.Success(
+                result.Data,
+                "Vehicle created successfully"
+            ));
         }
 
-        // PUT: api/vehicle/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateVehicle(int id, [FromBody] VehicleDTOs dto)
+        public async Task<ActionResult<ApiResponse>> UpdateVehicle(int id, [FromBody] VehicleDTOs dto)
         {
             dto.Id = id;
-            var updated = await _vehicleService.UpdateVehicleAsync(dto);
-            if (!updated) return NotFound("Vehicle not found");
-            return Ok("Vehicle updated successfully");
+            var result = await _vehicleService.UpdateVehicleAsync(dto);
+
+            if (!result.Success)
+                return NotFound(ApiResponse.Fail(result.Error!, 404));
+
+            return Ok(ApiResponse.Success("Vehicle updated successfully"));
         }
 
-        // DELETE: api/vehicle/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteVehicle(int id)
+        public async Task<ActionResult<ApiResponse>> DeleteVehicle(int id)
         {
-            var deleted = await _vehicleService.DeleteVehicleAsync(id);
-            if (!deleted) return NotFound("Vehicle not found");
-            return Ok("Vehicle deleted successfully");
+            var result = await _vehicleService.DeleteVehicleAsync(id);
+
+            if (!result.Success)
+                return NotFound(ApiResponse.Fail(result.Error!, 404));
+
+            return Ok(ApiResponse.Success("Vehicle deleted successfully"));
         }
     }
-
 }
