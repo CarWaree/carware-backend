@@ -20,7 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="DataSeed\egypt_car_brands_models.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 </Project>

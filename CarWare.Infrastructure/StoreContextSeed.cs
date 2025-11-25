@@ -15,22 +15,34 @@ namespace CarWare.Infrastructure
     {
         public static async Task SeedAsync(ApplicationDbContext context)
         {
+            Console.WriteLine("Starting vehicle seeding...");
+
             if (await context.vehicles.AnyAsync())
-                return; // Already seeded 
+            {
+                Console.WriteLine("Vehicles table already has data. Skipping seeding.");
+                return;
+            }
 
-            var filePath = Path.Combine(AppContext.BaseDirectory, "egypt_car_brands_models.json");
-
+            var filePath = "../CarWare.Infrastructure/DataSeed/egypt_car_brands_models.json";
+            Console.WriteLine($"Looking for JSON file at: {filePath}");
 
             if (!File.Exists(filePath))
+            {
+                Console.WriteLine("JSON file not found!");
                 return;
+            }
+
+            Console.WriteLine("JSON file found, reading data...");
 
             var json = await File.ReadAllTextAsync(filePath);
-
             var data = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            if (data is null)
+            if (data == null)
+            {
+                Console.WriteLine("Failed to deserialize JSON data.");
                 return;
+            }
 
             var vehicles = new List<Vehicle>();
             var year = DateTime.UtcNow.Year;
@@ -43,15 +55,19 @@ namespace CarWare.Infrastructure
                     {
                         Brand = brand.Key,
                         Model = model,
-                        Year = year,        
-                        Color = null,       
-                        UserId = null       
+                        Year = year,
+                        Color = null,
+                        UserId = null
                     });
                 }
             }
 
+            Console.WriteLine($"Number of vehicles to seed: {vehicles.Count}");
+
             await context.vehicles.AddRangeAsync(vehicles);
             await context.SaveChangesAsync();
+
+            Console.WriteLine("Vehicle seeding completed!");
         }
     }
 }

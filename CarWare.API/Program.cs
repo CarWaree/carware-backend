@@ -124,7 +124,7 @@ namespace CarWare.API
             using var scope = app.Services.CreateScope();
             var services = scope.ServiceProvider;
 
-            var LoggerFactory = service.GetRequiredService<ILoggerFactory>();
+            var LoggerFactory = services.GetRequiredService<ILoggerFactory>();
 
             try
             {
@@ -143,9 +143,7 @@ namespace CarWare.API
             {
                 var logger = services.GetRequiredService<ILogger<Program>>();
                 logger.LogError(ex, " Error during migration or seeding");
-            }
-
-           
+            }           
 
             //Create roles when the app starts
             await CreateRolesAsync(app);
