@@ -10,6 +10,7 @@ using CarWare.Infrastructure.Repositories;
 using CarWare.Infrastructure.UnitOfWork;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -96,37 +97,33 @@ namespace CarWare.API
             //vehicleservice
             builder.Services.AddScoped<IVehicleService, Vehicleservice>();
 
-
             //autoMapper
-            //builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-            //builder.Services.AddAutoMapper(typeof(AuthProfile));
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
 
             //CORS
-            var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+            var MyAllowSpecificOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy(name: MyAllowSpecificOrigins,
+                options.AddPolicy("MyAllowSpecificOrigins",
                                   policy =>
                                   {
-                                      policy.WithOrigins("https://localhost:3000", "http://localhost:3000") // your frontend URLs
+                                      policy
+                                            .WithOrigins("AllowedOrigins") //your frontend URLs
                                             .AllowAnyHeader()
                                             .AllowAnyMethod()
-                                            .AllowCredentials(); // needed if using cookies/auth
+                                            .AllowCredentials(); //if i want to use cookies/auth
                                   });
             });
 
             var app = builder.Build();
 
             //update Database 
-
             using var scope = app.Services.CreateScope();
             var service = scope.ServiceProvider;
             var _dbcontext = service.GetRequiredService<ApplicationDbContext>();
 
             var LoggerFactory = service.GetRequiredService<ILoggerFactory>();
-
             try
             {
                 await _dbcontext.Database.MigrateAsync();
@@ -152,7 +149,7 @@ namespace CarWare.API
             }
             app.UseHttpsRedirection();
 
-            app.UseCors(MyAllowSpecificOrigins);
+            app.UseCors("MyAllowSpecificOrigins");
 
             app.UseAuthentication();
             app.UseAuthorization();

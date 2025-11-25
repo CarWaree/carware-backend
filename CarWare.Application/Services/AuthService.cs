@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -30,6 +31,7 @@ namespace CarWare.Application.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IDistributedCache _cache;
+        private readonly IConfiguration _config;
         private readonly IEmailSender _emailSender;
         private const int OtpValidityMinutes = 3;
         private readonly JWT _jwt;
@@ -42,12 +44,14 @@ namespace CarWare.Application.Services
             IOptions<JWT> jwt,
             IEmailSender emailSender,
             IDistributedCache cache,
+            IConfiguration config,
             IMapper mapper)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _jwt = jwt.Value;
             _cache = cache;
+            _config = config;
             _emailSender = emailSender;
             _mapper = mapper;
         }
@@ -255,8 +259,10 @@ namespace CarWare.Application.Services
 
         public IActionResult GoogleLogin(string? returnUrl = null)
         {
-            var redirectUrl = "/api/auth/google-callback?returnUrl=" + returnUrl;
+            var baseUrl = _config["ExternalAuth:Google:CallbackBaseUrl"];
+            var callbackPath = _config["ExternalAuth:Google:CallbackPath"];
 
+            var redirectUrl = $"{baseUrl}{callbackPath}?returnUrl={returnUrl}";
             var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
 
             return new ChallengeResult("Google", props);
