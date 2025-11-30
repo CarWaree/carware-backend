@@ -104,8 +104,9 @@ namespace CarWare.API
 
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
-            //service provider
-            builder.Services.AddScoped<IProviderServicesService, ProviderServicesService>();
+            //service center
+
+            builder.Services.AddScoped<IServiceCenterService, ServiceCenterService>();
 
 
             //CORS
