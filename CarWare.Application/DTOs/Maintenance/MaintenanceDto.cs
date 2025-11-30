@@ -11,6 +11,7 @@ namespace CarWare.Application.DTOs.Maintenance
     {
         public int? MaintenanceId { get; set; }   
         [Required]  
+
         public string TypeOfMaintenance { get; set; }
 
         [Required]

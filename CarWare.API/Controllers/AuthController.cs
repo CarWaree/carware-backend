@@ -90,5 +90,23 @@ namespace CarWare.API.Controllers
         {
             return await _authService.GoogleCallback(returnUrl, remoteError);
         }
+
+        [HttpGet("verify-email")] //send verfiy email while sign up
+        public async Task<IActionResult> VerifyEmail([FromQuery] string userId, [FromQuery] string token)
+        {
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+                return BadRequest(ApiResponse.Fail("Invalid verification request."));
+
+            var user = await _signInManager.UserManager.FindByIdAsync(userId);
+            if (user == null)
+                return BadRequest(ApiResponse.Fail("User not found."));
+
+            var result = await _signInManager.UserManager.ConfirmEmailAsync(user, token);
+            if (!result.Succeeded)
+                return BadRequest(ApiResponse.Fail("Email verification failed."));
+
+            return Ok(ApiResponse.Success("Email verified successfully! You can now login."));
+        }
+
     }
 }
