@@ -100,6 +100,9 @@ namespace CarWare.API
 
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
+            //service provider
+            builder.Services.AddScoped<IProviderServicesService, ProviderServicesService>();
+
 
             //CORS
             var MyAllowSpecificOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
