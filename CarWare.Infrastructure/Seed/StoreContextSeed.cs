@@ -1,5 +1,4 @@
-﻿using CarWare.Domain.Entities;
-using CarWare.Infrastructure.Context;
+﻿using CarWare.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -8,7 +7,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace CarWare.Infrastructure
+namespace CarWare.Infrastructure.Seed
 {
     public class StoreContextSeed
     {
@@ -17,7 +16,7 @@ namespace CarWare.Infrastructure
             string assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             string filePath = Path.Combine(assemblyFolder, "DataSeed", "egypt_car_brands_models.json");
 
-        if (!File.Exists(filePath))
+            if (!File.Exists(filePath))
             {
                 File.WriteAllText(filePath, "{}");
             }
@@ -29,9 +28,7 @@ namespace CarWare.Infrastructure
 
             var year = DateTime.UtcNow.Year;
 
-            /* -----------------------------------------  
-             * 1) Seed Brands  
-             * ----------------------------------------- */
+             //1) Seed Brands  
             foreach (var brandEntry in carData)
             {
                 var brandName = brandEntry.Key?.Trim();
@@ -44,9 +41,7 @@ namespace CarWare.Infrastructure
             }
             await context.SaveChangesAsync();
 
-            /* -----------------------------------------  
-             * 2) Seed Models  
-             * ----------------------------------------- */
+             //2) Seed Models  
             var allBrands = await context.brands.ToListAsync();
             foreach (var brandEntry in carData)
             {
@@ -70,9 +65,8 @@ namespace CarWare.Infrastructure
             }
             await context.SaveChangesAsync();
 
-            /* -----------------------------------------  
-             * 3) Seed Vehicles  
-             * ----------------------------------------- */
+              
+            //3) Seed Vehicles  
             var allModels = await context.models.ToListAsync();
 
             foreach (var brandEntry in carData)
