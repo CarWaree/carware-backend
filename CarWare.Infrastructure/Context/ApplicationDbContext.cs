@@ -19,6 +19,7 @@ namespace CarWare.Infrastructure.Context
         public DbSet<MaintenanceType> maintenanceTypes { get; set; }
         public DbSet<ServiceCenter> ServiceCenters { get; set; }
         public DbSet<ProviderServices> ProviderServices { get; set; }
+        public DbSet<MaintenanceType> MaintenanceTypes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

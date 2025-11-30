@@ -16,5 +16,6 @@ namespace CarWare.Application.Interfaces
         Task<Pagination<MaintenanceDto>> GetUpcomingAsync(PaginationParameters pagination);
         Task<MaintenanceDto?> UpdateAsync(int id, MaintenanceDto dto);
         Task<bool> DeleteAsync(int id);
+       
     }
 }
