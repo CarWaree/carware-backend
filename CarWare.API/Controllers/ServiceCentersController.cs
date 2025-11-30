@@ -7,29 +7,31 @@ namespace CarWare.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProviderServicesController : ControllerBase
+    public class ServiceCentersController : ControllerBase
     {
-        private readonly IProviderServicesService _providerServicesService;
+        private readonly IServiceCenterService _serviceCenterService;
 
-        public ProviderServicesController(IProviderServicesService providerServicesService)
+        public ServiceCentersController(IServiceCenterService serviceCenterService)
         {
-            _providerServicesService = providerServicesService;
+            _serviceCenterService = serviceCenterService;
         }
 
+     
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _providerServicesService.GetAllAsync();
+            var result = await _serviceCenterService.GetAllAsync();
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
 
             return Ok(result.Data);
         }
+
+        
         [HttpGet("by-service-type")]
         public async Task<IActionResult> GetByServiceType([FromQuery] int serviceTypeId)
         {
-            var result = await _providerServicesService.GetProvidersByServiceTypeAsync(serviceTypeId);
-
+            var result = await _serviceCenterService.GetByServiceTypeAsync(serviceTypeId);
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
 
@@ -37,3 +39,4 @@ namespace CarWare.API.Controllers
         }
     }
 }
+
