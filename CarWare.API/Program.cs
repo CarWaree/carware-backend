@@ -98,6 +98,10 @@ namespace CarWare.API
             //vehicleservice
             builder.Services.AddScoped<IVehicleService, Vehicleservice>();
 
+            //maintenancetypeservice
+            builder.Services.AddScoped<IMaintenanceTypeService, MaintenanceTypeService>();
+
+
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
 
