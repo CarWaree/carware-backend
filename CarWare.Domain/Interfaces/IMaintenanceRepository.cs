@@ -3,9 +3,9 @@ using System.Linq;
 
 namespace CarWare.Domain.Interfaces
 {
-      public interface IMaintenanceRepository :  IGenericRepository<Maintenance>
+      public interface IMaintenanceRepository :  IGenericRepository<MaintenanceReminder>
       {
-        IQueryable<Maintenance> GetByVehicleIdQueryable(int vehicleId);
-        IQueryable<Maintenance> GetUpcomingQueryable();
+        IQueryable<MaintenanceReminder> GetByVehicleIdQueryable(int vehicleId);
+        IQueryable<MaintenanceReminder> GetUpcomingQueryable();
       }
 }

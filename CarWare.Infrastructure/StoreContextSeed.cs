@@ -4,70 +4,101 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace CarWare.Infrastructure
 {
-    public static class StoreContextSeed
+    public class StoreContextSeed
     {
         public static async Task SeedAsync(ApplicationDbContext context)
         {
-            Console.WriteLine("Starting vehicle seeding...");
+            string assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string filePath = Path.Combine(assemblyFolder, "DataSeed", "egypt_car_brands_models.json");
 
-            if (await context.vehicles.AnyAsync())
+        if (!File.Exists(filePath))
             {
-                Console.WriteLine("Vehicles table already has data. Skipping seeding.");
-                return;
+                File.WriteAllText(filePath, "{}");
             }
-
-            var filePath = "../CarWare.Infrastructure/DataSeed/egypt_car_brands_models.json";
-            Console.WriteLine($"Looking for JSON file at: {filePath}");
-
-            if (!File.Exists(filePath))
-            {
-                Console.WriteLine("JSON file not found!");
-                return;
-            }
-
-            Console.WriteLine("JSON file found, reading data...");
 
             var json = await File.ReadAllTextAsync(filePath);
-            var data = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var carData = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json);
 
-            if (data == null)
-            {
-                Console.WriteLine("Failed to deserialize JSON data.");
-                return;
-            }
+            if (carData == null || carData.Count == 0) return;
 
-            var vehicles = new List<Vehicle>();
             var year = DateTime.UtcNow.Year;
 
-            foreach (var brand in data)
+            /* -----------------------------------------  
+             * 1) Seed Brands  
+             * ----------------------------------------- */
+            foreach (var brandEntry in carData)
             {
-                foreach (var model in brand.Value)
+                var brandName = brandEntry.Key?.Trim();
+                if (string.IsNullOrWhiteSpace(brandName)) continue;
+
+                if (!await context.brands.AnyAsync(b => b.Name == brandName))
                 {
-                    vehicles.Add(new Vehicle
-                    {
-                        Brand = brand.Key,
-                        Model = model,
-                        Year = year,
-                        Color = null,
-                        UserId = null
-                    });
+                    context.brands.Add(new Brand { Name = brandName });
                 }
             }
-
-            Console.WriteLine($"Number of vehicles to seed: {vehicles.Count}");
-
-            await context.vehicles.AddRangeAsync(vehicles);
             await context.SaveChangesAsync();
 
-            Console.WriteLine("Vehicle seeding completed!");
+            /* -----------------------------------------  
+             * 2) Seed Models  
+             * ----------------------------------------- */
+            var allBrands = await context.brands.ToListAsync();
+            foreach (var brandEntry in carData)
+            {
+                var brand = allBrands.Find(b => b.Name == brandEntry.Key?.Trim());
+                if (brand == null) continue;
+
+                foreach (var modelNameRaw in brandEntry.Value)
+                {
+                    var modelName = modelNameRaw?.Trim();
+                    if (string.IsNullOrWhiteSpace(modelName)) continue;
+
+                    if (!await context.models.AnyAsync(m => m.Name == modelName && m.BrandId == brand.Id))
+                    {
+                        context.models.Add(new Model
+                        {
+                            Name = modelName,
+                            BrandId = brand.Id
+                        });
+                    }
+                }
+            }
+            await context.SaveChangesAsync();
+
+            /* -----------------------------------------  
+             * 3) Seed Vehicles  
+             * ----------------------------------------- */
+            var allModels = await context.models.ToListAsync();
+
+            foreach (var brandEntry in carData)
+            {
+                var brand = allBrands.Find(b => b.Name == brandEntry.Key?.Trim());
+                if (brand == null) continue;
+
+                foreach (var modelNameRaw in brandEntry.Value)
+                {
+                    var modelName = modelNameRaw?.Trim();
+                    var model = allModels.Find(m => m.Name == modelName && m.BrandId == brand.Id);
+                    if (model == null) continue;
+
+                    if (!await context.vehicles.AnyAsync(v => v.BrandId == brand.Id && v.ModelId == model.Id))
+                    {
+                        context.vehicles.Add(new Vehicle
+                        {
+                            Name = $"{brand.Name} {model.Name}", 
+                            BrandId = brand.Id,
+                            ModelId = model.Id,
+                            Year = year
+                        });
+                    }
+                }
+            }
+            await context.SaveChangesAsync();
         }
-    }
+    }  
 }

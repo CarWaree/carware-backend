@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CarWare.Infrastructure.Repositories
 {
-    public class MaintenanceRepository : GenericRepository<Maintenance>, IMaintenanceRepository
+    public class MaintenanceRepository : GenericRepository<MaintenanceReminder>, IMaintenanceRepository
     {
         private readonly ApplicationDbContext _dbContext;
 
@@ -19,13 +19,13 @@ namespace CarWare.Infrastructure.Repositories
             _dbContext = dbContext;
         }
 
-        public IQueryable<Maintenance> GetByVehicleIdQueryable(int vehicleId)
+        public IQueryable<MaintenanceReminder> GetByVehicleIdQueryable(int vehicleId)
         {
             return _dbContext.maintenances.Where(m => m.VehicleId == vehicleId);
 
         }
 
-        public IQueryable<Maintenance> GetUpcomingQueryable()
+        public IQueryable<MaintenanceReminder> GetUpcomingQueryable()
         {
             var today = DateTime.UtcNow;
             return _dbContext.maintenances.Where(m => m.NextDueDate > today).OrderBy(m => m.NextDueDate);

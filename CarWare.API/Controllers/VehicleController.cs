@@ -1,13 +1,14 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using CarWare.API.Errors;
+using CarWare.API.Errors.NonGeneric;
+using CarWare.Application.Common;
 using CarWare.Application.DTOs.Vehicle;
+using CarWare.Application.helper;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.helper;
 using Microsoft.AspNetCore.Mvc;
-using AutoMapper.QueryableExtensions;
-using CarWare.Application.Common;
-using CarWare.Application.helper;
-using CarWare.API.Errors;
-using CarWare.API.Errors.NonGeneric;
+using Microsoft.EntityFrameworkCore;
 
 namespace CarWare.API.Controllers
 {
@@ -24,18 +25,45 @@ namespace CarWare.API.Controllers
             _mapper = mapper;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<Pagination<VehicleDTOs>>> GetAll([FromQuery] PaginationParameters @params ){
-            var query = _vehicleService.QueryVehicles();
+        //[HttpGet]
+        //public async Task<ActionResult> GetAll()
+        //{
+        //    var result = await _vehicleService.GetAllVehiclesAsync();
 
-            var pagedVehicles = await query
-                .ProjectTo<VehicleDTOs>(_mapper.ConfigurationProvider)
-                .ToPagedList(@params.PageIndex, @params.PageSize);
+        //    if (!result.Success)
+        //        return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
 
-            return Ok(ApiResponseGeneric<Pagination<VehicleDTOs>>.Success(
-                pagedVehicles, "Vehicles retrieved successfully"
-            ));
-        }
+        //    return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
+        //        result.Data, "Vehicles retrieved successfully"
+        //    ));
+        //}
+
+        //[HttpGet("brands")]
+        //public async Task<ActionResult> GetAllBrands()
+        //{
+        //    var result = await _vehicleService.GetAllBrandsAsync();
+
+        //    if (!result.Success)
+        //        return BadRequest(ApiResponse.Fail(result.Error));
+
+        //    return Ok(ApiResponseGeneric<List<BrandDTO>>
+        //        .Success(result.Data, "Brands fetched successfully."));
+        //}
+
+        [HttpGet("models")]
+        //public async Task<ActionResult> GetModelsByBrand(string brandName)
+        //{
+        //    if (string.IsNullOrWhiteSpace(brandName))
+        //        return BadRequest(ApiResponse.Fail("Brand name is required."));
+
+        //    var result = await _vehicleService.GetModelsByBrandsAsync(brandName);
+
+        //    if (!result.Success)
+        //        return BadRequest(ApiResponse.Fail(result.Error));
+
+        //    return Ok(ApiResponseGeneric<List<ModelDTO>>
+        //        .Success(result.Data, "Models fetched successfully."));
+        //}
 
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> GetById(int id)

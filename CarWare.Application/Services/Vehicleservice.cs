@@ -4,6 +4,9 @@ using CarWare.Application.DTOs.Vehicle;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
+using CarWare.Infrastructure.Repositories;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -20,11 +23,42 @@ namespace CarWare.Application.Services
             _mapper = mapper;
         }
 
-        // Query for pagination
-        public IQueryable<Vehicle> QueryVehicles()
+        // Get All Vehicles
+        public async Task<Result<List<VehicleDTOs>>> GetAllVehiclesAsync()
         {
-            return _unitOfWork.Repository<Vehicle>().Query();
+            var vehicles = await _unitOfWork.Repository<Vehicle>().GetAllAsync();
+            var dto = _mapper.Map<List<VehicleDTOs>>(vehicles);
+            return Result<List<VehicleDTOs>>.Ok(dto);
         }
+
+        // Get All Brands 
+        //public async Task<Result<List<BrandDTO>>> GetAllBrandsAsync()
+        //{
+        //    var brands = await _unitOfWork.VehicleRepository.GetAllBrandsAsync();
+
+        //    var brandsDTOs = brands
+        //        .Select(m => new BrandDTO { Name = m })
+        //        .ToList();
+
+        //    return Result<List<BrandDTO>>.Ok(brandsDTOs);
+        //}
+
+        //Get all models for a specific brand
+        //public async Task<Result<List<ModelDTO>>> GetModelsByBrandsAsync(string brandname)
+        //{
+        //    var vehicles = await _unitOfWork.VehicleRepository.GetModelsByBrandAsync(brandname);
+
+        //    var modelDTOs = vehicles
+        //         .Select(v => new ModelDTO
+        //         {
+        //             id = v.Id,
+        //             Name = v.Model,
+        //             Brand = new BrandDTO { id = 0, Name = v.Brand }
+        //         })
+        //        .ToList();
+
+        //    return Result<List<ModelDTO>>.Ok(modelDTOs);
+        //}
 
         // Get vehicle by ID
         public async Task<Result<VehicleDTOs>> GetVehicleByIdAsync(int id)

@@ -26,14 +26,14 @@ namespace CarWare.Infrastructure.Repositories
             await _dbSet.AddAsync(entity);
         }
 
+        public void Update(T entity)
+        {
+            _dbSet.Update(entity);
+        }
+
         public void Delete(T entity)
         {
             _dbSet.Remove(entity);
-        }
-
-        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
-        {
-            return await _dbSet.Where(predicate).ToListAsync();
         }
 
         public async Task<IEnumerable<T>> GetAllAsync()
@@ -51,9 +51,9 @@ namespace CarWare.Infrastructure.Repositories
             return _context.Set<T>().AsQueryable();
         }
 
-        public void Update(T entity)
+        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
-            _dbSet.Update(entity);
+            return await _dbSet.Where(predicate).ToListAsync();
         }
     }
 }

@@ -13,7 +13,7 @@ namespace CarWare.Application.Mapping
     {
         public MappingProfile()
         {
-            CreateMap<VehicleDTOs, Vehicle>();
+            CreateMap<VehicleDTOs, Vehicle>().ReverseMap(); ;
         }
     }
 

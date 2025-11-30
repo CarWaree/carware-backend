@@ -20,6 +20,6 @@ namespace CarWare.Application.DTOs.Vehicle
         public int Year { get; set; }
         public string Color { get; set;}
 
-        public string UserId { get; set; } //in review
+        //public string UserId { get; set; } //in review
     }
 }

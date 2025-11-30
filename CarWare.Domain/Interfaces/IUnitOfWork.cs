@@ -11,6 +11,7 @@ namespace CarWare.Domain
     public interface IUnitOfWork:IAsyncDisposable
     {
         IGenericRepository<TEntity> Repository<TEntity>() where TEntity : BaseEntity;
+        IVehicleRepository VehicleRepository { get; }
         Task<int> CompleteAsync();
     }
 }
