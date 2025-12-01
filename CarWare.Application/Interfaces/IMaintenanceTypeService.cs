@@ -1,14 +1,12 @@
-﻿using CarWare.Application.DTOs.Maintenance;
-using System;
+﻿using CarWare.Application.Common;
+using CarWare.Application.DTOs.Maintenance;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Interfaces
 {
     public interface IMaintenanceTypeService
     {
-        Task<IEnumerable<MaintenanceTypeDto>> GetAllAsync();
+        Task<Result<IEnumerable<MaintenanceTypeDto>>> GetAllAsync();
     }
 }

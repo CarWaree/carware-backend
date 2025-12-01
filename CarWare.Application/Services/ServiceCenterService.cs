@@ -2,13 +2,9 @@
 using CarWare.Application.Common;
 using CarWare.Application.DTOs.Provider_Center;
 using CarWare.Application.Interfaces;
-using CarWare.Domain;
-using CarWare.Domain.Entities;
 using CarWare.Infrastructure.Context;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,7 +22,6 @@ namespace CarWare.Application.Services
             _mapper = mapper;
         }
 
-     
         public async Task<Result<IEnumerable<ServiceCenterDto>>> GetAllAsync()
         {
             var entities = await _context.ServiceCenters.ToListAsync();
@@ -34,7 +29,6 @@ namespace CarWare.Application.Services
             return Result<IEnumerable<ServiceCenterDto>>.Ok(dtos);
         }
 
-        
         public async Task<Result<IEnumerable<ServiceCenterDto>>> GetByServiceTypeAsync(int serviceTypeId)
         {
             var entities = await _context.ServiceCenters

@@ -27,11 +27,14 @@ namespace CarWare.Infrastructure.Repositories
         //    return brands;
         //}
 
-        //public async Task<List<Vehicle>> GetModelsByBrandAsync(string brandName)
-        //{
-        //    return await _dbContext.vehicles
-        //        .Where(v => v.Brand == brandName)
-        //        .ToListAsync();
-        //}
+        public async Task<List<Model>> GetModelsByBrandAsync(int brandId)
+        {
+            var models = await _dbContext.models
+                .Include(m => m.Brand)
+                .Where(m => m.BrandId == brandId)
+                .ToListAsync();
+
+            return models;
+        }
     }
 }

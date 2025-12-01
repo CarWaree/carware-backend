@@ -38,32 +38,29 @@ namespace CarWare.API.Controllers
         //    ));
         //}
 
-        //[HttpGet("brands")]
-        //public async Task<ActionResult> GetAllBrands()
-        //{
-        //    var result = await _vehicleService.GetAllBrandsAsync();
+        [HttpGet("brands")]
+        public async Task<ActionResult> GetAllBrands()
+        {
+            var result = await _vehicleService.GetAllBrandsAsync();
 
-        //    if (!result.Success)
-        //        return BadRequest(ApiResponse.Fail(result.Error));
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error));
 
-        //    return Ok(ApiResponseGeneric<List<BrandDTO>>
-        //        .Success(result.Data, "Brands fetched successfully."));
-        //}
+            return Ok(ApiResponseGeneric<List<BrandDTO>>
+                .Success(result.Data, "Brands fetched successfully."));
+        }
 
         [HttpGet("models")]
-        //public async Task<ActionResult> GetModelsByBrand(string brandName)
-        //{
-        //    if (string.IsNullOrWhiteSpace(brandName))
-        //        return BadRequest(ApiResponse.Fail("Brand name is required."));
+        public async Task<ActionResult> GetModelsByBrand(int brandId)
+        {
+            var result = await _vehicleService.GetModelsByBrandsAsync(brandId);
 
-        //    var result = await _vehicleService.GetModelsByBrandsAsync(brandName);
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error));
 
-        //    if (!result.Success)
-        //        return BadRequest(ApiResponse.Fail(result.Error));
-
-        //    return Ok(ApiResponseGeneric<List<ModelDTO>>
-        //        .Success(result.Data, "Models fetched successfully."));
-        //}
+            return Ok(ApiResponseGeneric<List<ModelDTO>>
+                .Success(result.Data, "Models fetched successfully."));
+        }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> GetById(int id)

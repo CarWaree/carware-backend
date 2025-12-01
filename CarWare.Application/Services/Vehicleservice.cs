@@ -32,33 +32,24 @@ namespace CarWare.Application.Services
         }
 
         // Get All Brands 
-        //public async Task<Result<List<BrandDTO>>> GetAllBrandsAsync()
-        //{
-        //    var brands = await _unitOfWork.VehicleRepository.GetAllBrandsAsync();
+        public async Task<Result<List<BrandDTO>>> GetAllBrandsAsync()
+        {
+            var brands = await _unitOfWork.Repository<Brand>().GetAllAsync();
 
-        //    var brandsDTOs = brands
-        //        .Select(m => new BrandDTO { Name = m })
-        //        .ToList();
+            var mapped = _mapper.Map<List<BrandDTO>>(brands);
 
-        //    return Result<List<BrandDTO>>.Ok(brandsDTOs);
-        //}
+            return Result<List<BrandDTO>>.Ok(mapped);
+        }
 
         //Get all models for a specific brand
-        //public async Task<Result<List<ModelDTO>>> GetModelsByBrandsAsync(string brandname)
-        //{
-        //    var vehicles = await _unitOfWork.VehicleRepository.GetModelsByBrandAsync(brandname);
+        public async Task<Result<List<ModelDTO>>> GetModelsByBrandsAsync(int brandId)
+        {
+            var models = await _unitOfWork.VehicleRepository.GetModelsByBrandAsync(brandId);
 
-        //    var modelDTOs = vehicles
-        //         .Select(v => new ModelDTO
-        //         {
-        //             id = v.Id,
-        //             Name = v.Model,
-        //             Brand = new BrandDTO { id = 0, Name = v.Brand }
-        //         })
-        //        .ToList();
+            var mapped = _mapper.Map<List<ModelDTO>>(models);
 
-        //    return Result<List<ModelDTO>>.Ok(modelDTOs);
-        //}
+            return Result<List<ModelDTO>>.Ok(mapped);
+        }
 
         // Get vehicle by ID
         public async Task<Result<VehicleDTOs>> GetVehicleByIdAsync(int id)

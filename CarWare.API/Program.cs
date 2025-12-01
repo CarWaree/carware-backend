@@ -1,5 +1,6 @@
 ﻿using CarWare.API.Middlewares;
 using CarWare.Application.Interfaces;
+using CarWare.Application.Mapping;
 using CarWare.Application.Services;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
@@ -105,8 +106,9 @@ namespace CarWare.API
 
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
-            //service center
+            builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
+            //service center
             builder.Services.AddScoped<IServiceCenterService, ServiceCenterService>();
 
 

@@ -1,12 +1,11 @@
 ﻿using AutoMapper;
+using CarWare.Application.Common;
 using CarWare.Application.DTOs.Maintenance;
 using CarWare.Application.Interfaces;
-using CarWare.Domain.Entities;
 using CarWare.Domain;
-using System;
+using CarWare.Domain.Entities;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
@@ -23,11 +22,16 @@ namespace CarWare.Application.Services
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<MaintenanceTypeDto>> GetAllAsync()
+        public async Task<Result<IEnumerable<MaintenanceTypeDto>>> GetAllAsync()
         {
             var data = await _unitOfWork.Repository<MaintenanceType>().GetAllAsync();
-            return _mapper.Map<IEnumerable<MaintenanceTypeDto>>(data);
+
+            if (data == null || !data.Any())
+                return Result<IEnumerable<MaintenanceTypeDto>>.Fail("No maintenance types found");
+
+            var mapped = _mapper.Map<IEnumerable<MaintenanceTypeDto>>(data);
+
+            return Result<IEnumerable<MaintenanceTypeDto>>.Ok(mapped);
         }
-       
     }
 }

@@ -10,8 +10,8 @@ namespace CarWare.Application.Interfaces
     public interface IVehicleService
     {
         //Task<Result<List<VehicleDTOs>>> GetAllVehiclesAsync();
-        //Task<Result<List<BrandDTO>>> GetAllBrandsAsync();
-        //Task<Result<List<ModelDTO>>> GetModelsByBrandsAsync(string brandname);
+        Task<Result<List<BrandDTO>>> GetAllBrandsAsync();
+        Task<Result<List<ModelDTO>>> GetModelsByBrandsAsync(int brandId);
         Task<Result<VehicleDTOs>> GetVehicleByIdAsync(int id);
         Task<Result<VehicleDTOs>> AddVehicleAsync(VehicleDTOs dto);
         Task<Result<bool>> UpdateVehicleAsync(VehicleDTOs dto);
