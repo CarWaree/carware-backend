@@ -6,6 +6,7 @@ using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,8 +27,8 @@ namespace CarWare.Application.Services
         // Get All Vehicles
         public async Task<Result<List<VehicleDTOs>>> GetAllVehiclesAsync()
         {
-            var vehicles = await _unitOfWork.Repository<Vehicle>().GetAllAsync();
-            var dto = _mapper.Map<List<VehicleDTOs>>(vehicles);
+            var vehicls = await _unitOfWork.VehicleRepository.GetAllCarsWithDetailsAsync();
+            var dto = _mapper.Map<List<VehicleDTOs>>(vehicls);
             return Result<List<VehicleDTOs>>.Ok(dto);
         }
 
@@ -54,8 +55,7 @@ namespace CarWare.Application.Services
         // Get vehicle by ID
         public async Task<Result<VehicleDTOs>> GetVehicleByIdAsync(int id)
         {
-            var repo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = await repo.GetByIdAsync(id);
+            var vehicle = await _unitOfWork.VehicleRepository.GetCarByIdWithDetailsAsync(id);
 
             if (vehicle == null)
                 return Result<VehicleDTOs>.Fail("Vehicle not found");
@@ -65,16 +65,45 @@ namespace CarWare.Application.Services
         }
 
         // Add new vehicle
-        public async Task<Result<VehicleDTOs>> AddVehicleAsync(VehicleDTOs dto)
+        public async Task<Result<VehicleDTOs>> AddVehicleAsync(VehicleCreateDTO dto)
         {
-            var repo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = _mapper.Map<Vehicle>(dto);
+            try
+            {
+                // Get brand & model names
+                var brand = await _unitOfWork.VehicleRepository.GetByIdAsync(dto.BrandId);
+                var model = await _unitOfWork.VehicleRepository.GetByIdAsync(dto.ModelId);
 
-            await repo.AddAsync(vehicle);
-            await _unitOfWork.CompleteAsync();
+                if (brand == null || model == null)
+                    return Result<VehicleDTOs>.Fail("Invalid brand or model");
 
-            var resultDto = _mapper.Map<VehicleDTOs>(vehicle);
-            return Result<VehicleDTOs>.Ok(resultDto);
+                // Build Vehicle object
+                var car = new Vehicle
+                {
+                    BrandId = dto.BrandId,
+                    ModelId = dto.ModelId,
+                    Year = dto.Year,
+                    Color = dto.Color,
+                    UserId = "f31e859f-7e38-438a-9c0e-2db7b9086a66",           // JWT later 
+                    Name = $"{brand.Name} {model.Name}" // NOT NULL
+                };
+
+                // Save in DB
+                await _unitOfWork.VehicleRepository.AddAsync(car);
+                await _unitOfWork.CompleteAsync();
+
+                // Fetch with relations
+                var carWithDetails = await _unitOfWork.VehicleRepository.GetCarByIdWithDetailsAsync(car.Id);
+                var mapped = _mapper.Map<VehicleDTOs>(carWithDetails);
+
+                return Result<VehicleDTOs>.Ok(mapped);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Message: " + ex.Message);
+                Console.WriteLine("Inner Exception: " + ex.InnerException?.Message);
+                Console.WriteLine("StackTrace: " + ex.StackTrace);
+                throw;
+            }
         }
 
         // Update vehicle

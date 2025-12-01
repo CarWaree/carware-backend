@@ -17,15 +17,21 @@ namespace CarWare.Infrastructure.Repositories
             _dbContext = dbContext;
         }
 
-        //public async Task<List<string>> GetAllBrandsAsync()
-        //{
-        //    var brands = await _dbContext.vehicles
-        //        .Select(v => v.Brand)
-        //        .Distinct()
-        //        .ToListAsync();
+        public async Task<List<Vehicle>> GetAllCarsWithDetailsAsync()
+        {
+            return await _dbContext.vehicles
+                .Include(c => c.Brand)
+                .Include(c => c.Model)
+                .ToListAsync();
+        }
 
-        //    return brands;
-        //}
+        public async Task<Vehicle?> GetCarByIdWithDetailsAsync(int id)
+        {
+            return await _dbContext.vehicles
+                .Include(c => c.Brand)
+                .Include(c => c.Model)
+                .FirstOrDefaultAsync(c => c.Id == id);
+        }
 
         public async Task<List<Model>> GetModelsByBrandAsync(int brandId)
         {

@@ -25,18 +25,18 @@ namespace CarWare.API.Controllers
             _mapper = mapper;
         }
 
-        //[HttpGet]
-        //public async Task<ActionResult> GetAll()
-        //{
-        //    var result = await _vehicleService.GetAllVehiclesAsync();
+        [HttpGet]
+        public async Task<ActionResult> GetAll()
+        {
+            var result = await _vehicleService.GetAllVehiclesAsync();
 
-        //    if (!result.Success)
-        //        return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
+            if (!result.Success)
+                return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
 
-        //    return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
-        //        result.Data, "Vehicles retrieved successfully"
-        //    ));
-        //}
+            return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
+                result.Data, "Vehicles retrieved successfully"
+            ));
+        }
 
         [HttpGet("brands")]
         public async Task<ActionResult> GetAllBrands()
@@ -77,17 +77,16 @@ namespace CarWare.API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> AddVehicle([FromBody] VehicleDTOs dto)
+        public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> AddVehicle([FromBody] VehicleCreateDTO dto)
         {
             var result = await _vehicleService.AddVehicleAsync(dto);
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
 
-            return Ok(ApiResponseGeneric<VehicleDTOs>.Success(
-                result.Data,
-                "Vehicle created successfully"
-            ));
+            return CreatedAtAction(nameof(GetById), new { id = result.Data.Id },
+                ApiResponseGeneric<VehicleDTOs>.Success(result.Data, "Vehicle created successfully"));
+
         }
 
         [HttpPut("{id}")]

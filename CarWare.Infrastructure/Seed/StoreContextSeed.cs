@@ -64,35 +64,6 @@ namespace CarWare.Infrastructure.Seed
                 }
             }
             await context.SaveChangesAsync();
-
-              
-            //3) Seed Vehicles  
-            var allModels = await context.models.ToListAsync();
-
-            foreach (var brandEntry in carData)
-            {
-                var brand = allBrands.Find(b => b.Name == brandEntry.Key?.Trim());
-                if (brand == null) continue;
-
-                foreach (var modelNameRaw in brandEntry.Value)
-                {
-                    var modelName = modelNameRaw?.Trim();
-                    var model = allModels.Find(m => m.Name == modelName && m.BrandId == brand.Id);
-                    if (model == null) continue;
-
-                    if (!await context.vehicles.AnyAsync(v => v.BrandId == brand.Id && v.ModelId == model.Id))
-                    {
-                        context.vehicles.Add(new Vehicle
-                        {
-                            Name = $"{brand.Name} {model.Name}", 
-                            BrandId = brand.Id,
-                            ModelId = model.Id,
-                            Year = year
-                        });
-                    }
-                }
-            }
-            await context.SaveChangesAsync();
         }
     }  
 }

@@ -15,6 +15,5 @@ namespace CarWare.Application.DTOs.Vehicle
         [Required]
         [StringLength(50)]
         public string Color { get; set; }
-
     }
 }

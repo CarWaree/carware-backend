@@ -6,7 +6,8 @@ namespace CarWare.Domain.Interfaces
 {
     public interface IVehicleRepository : IGenericRepository<Vehicle>
     {
-        //Task<List<string>> GetAllBrandsAsync();
+        Task<List<Vehicle>> GetAllCarsWithDetailsAsync();
+        Task<Vehicle?> GetCarByIdWithDetailsAsync(int id);
         Task<List<Model>> GetModelsByBrandAsync(int brandId);
     }
 }
