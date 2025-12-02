@@ -1,5 +1,4 @@
-﻿using CarWare.Domain.Entities;
-using CarWare.Domain.Interfaces;
+﻿using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -31,6 +30,15 @@ namespace CarWare.Infrastructure.Repositories
                 .Include(c => c.Brand)
                 .Include(c => c.Model)
                 .FirstOrDefaultAsync(c => c.Id == id);
+        }
+
+        public async Task<List<Vehicle>> GetAllVehiclesAsync()
+        {
+            return await _dbContext.vehicles
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.user)
+                .ToListAsync();
         }
 
         public async Task<List<Model>> GetModelsByBrandAsync(int brandId)
