@@ -1,5 +1,4 @@
-﻿using CarWare.Domain.Entities;
-using CarWare.Domain.Interfaces;
+﻿using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -17,15 +16,14 @@ namespace CarWare.Infrastructure.Repositories
             _dbContext = dbContext;
         }
 
-        //public async Task<List<string>> GetAllBrandsAsync()
-        //{
-        //    var brands = await _dbContext.vehicles
-        //        .Select(v => v.Brand)
-        //        .Distinct()
-        //        .ToListAsync();
-
-        //    return brands;
-        //}
+        public async Task<List<Vehicle>> GetAllVehiclesAsync()
+        {
+            return await _dbContext.vehicles
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.user)
+                .ToListAsync();
+        }
 
         public async Task<List<Model>> GetModelsByBrandAsync(int brandId)
         {
