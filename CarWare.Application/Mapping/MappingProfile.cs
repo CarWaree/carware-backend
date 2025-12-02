@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using CarWare.Application.DTOs.Maintenance;
+using CarWare.Application.DTOs.maintenanceReminder;
 using CarWare.Application.DTOs.Provider_Center;
 using CarWare.Application.DTOs.Vehicle;
 using CarWare.Domain.Entities;
@@ -21,6 +22,12 @@ namespace CarWare.Application.Mapping
 
             CreateMap<MaintenanceType, MaintenanceTypeDto>();
             CreateMap<ServiceCenter, ServiceCenterDto>();
+            CreateMap<CreateMaintenanceReminderDto, MaintenanceReminder>();
+            CreateMap<UpdateMaintenanceReminderDto, MaintenanceReminder>();
+            CreateMap<MaintenanceReminder, MaintenanceReminderResponseDto>()
+            .ForMember(dest => dest.TypeName, opt => opt.MapFrom(src => src.Type.Name))
+            .ForMember(dest => dest.VehicleName, opt => opt.MapFrom(src => src.Vehicle.Name));
+
 
         }
     }

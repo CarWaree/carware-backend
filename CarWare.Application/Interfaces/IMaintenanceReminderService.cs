@@ -1,7 +1,5 @@
 ﻿using CarWare.Application.Common;
-using CarWare.Application.DTOs.Maintenance;
 using CarWare.Application.DTOs.maintenanceReminder;
-using CarWare.Domain.helper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CarWare.Application.Interfaces
 {
-    public interface IMaintenanceService
+    public interface IMaintenanceReminderService
     {
         Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllAsync();
         Task<Result<MaintenanceReminderResponseDto>> GetByIdAsync(int id);
@@ -19,8 +17,5 @@ namespace CarWare.Application.Interfaces
         Task<Result<bool>> DeleteAsync(int id);
         Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(int days = 7);
         Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllByCarAsync(int vehicleId);
-    
+    }
 }
-
-}
-

@@ -110,6 +110,8 @@ namespace CarWare.API
 
             //service center
             builder.Services.AddScoped<IServiceCenterService, ServiceCenterService>();
+            //maintenence reminder 
+            builder.Services.AddScoped<IMaintenanceReminderService, MaintenanceReminderService>();
 
 
             //CORS
