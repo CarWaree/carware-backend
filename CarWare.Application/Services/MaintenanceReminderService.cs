@@ -17,25 +17,26 @@ namespace CarWare.Application.Services
     {
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
-        private readonly IGenericRepository<MaintenanceReminder> _repo;
+        private readonly IMaintenanceRepository _repo;
 
         public MaintenanceReminderService(IUnitOfWork uow, IMapper mapper)
         {
             _uow = uow;
             _mapper = mapper;
-            _repo = _uow.Repository<MaintenanceReminder>();
+            _repo = _uow.MaintenanceRepository;
         }
         public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllAsync()
         {
-            var entities = await _repo.GetAllAsync();
+            var entities = await _repo.GetAllWithDetailsAsync();
             var dtos = _mapper.Map<IEnumerable<MaintenanceReminderResponseDto>>(entities);
             return Result<IEnumerable<MaintenanceReminderResponseDto>>.Ok(dtos);
         }
 
         public async Task<Result<MaintenanceReminderResponseDto>> GetByIdAsync(int id)
         {
-            var entity = await _repo.GetByIdAsync(id);
-            if (entity == null) return Result<MaintenanceReminderResponseDto>.Fail($"MaintenanceReminder with id {id} not found");
+            var entity = await _repo.GetByIdWithDetailsAsync(id);
+            if (entity == null)
+                return Result<MaintenanceReminderResponseDto>.Fail($"MaintenanceReminder with id {id} not found");
 
             var dto = _mapper.Map<MaintenanceReminderResponseDto>(entity);
             return Result<MaintenanceReminderResponseDto>.Ok(dto);
@@ -49,14 +50,17 @@ namespace CarWare.Application.Services
             await _repo.AddAsync(entity);
             await _uow.CompleteAsync();
 
-            var resultDto = _mapper.Map<MaintenanceReminderResponseDto>(entity);
+            var entityWithDetails = await _repo.GetByIdWithDetailsAsync(entity.Id);
+            var resultDto = _mapper.Map<MaintenanceReminderResponseDto>(entityWithDetails);
+
             return Result<MaintenanceReminderResponseDto>.Ok(resultDto);
         }
 
         public async Task<Result<MaintenanceReminderResponseDto>> UpdateAsync(UpdateMaintenanceReminderDto dto)
         {
-            var existing = await _repo.GetByIdAsync(dto.Id);
-            if (existing == null) return Result<MaintenanceReminderResponseDto>.Fail($"MaintenanceReminder with id {dto.Id} not found");
+            var existing = await _repo.GetByIdWithDetailsAsync(dto.Id);
+            if (existing == null)
+                return Result<MaintenanceReminderResponseDto>.Fail($"MaintenanceReminder with id {dto.Id} not found");
 
             _mapper.Map(dto, existing);
             existing.UpdatedAt = DateTime.UtcNow;
@@ -64,14 +68,17 @@ namespace CarWare.Application.Services
             _repo.Update(existing);
             await _uow.CompleteAsync();
 
-            var resultDto = _mapper.Map<MaintenanceReminderResponseDto>(existing);
+            var updatedEntity = await _repo.GetByIdWithDetailsAsync(existing.Id);
+            var resultDto = _mapper.Map<MaintenanceReminderResponseDto>(updatedEntity);
+
             return Result<MaintenanceReminderResponseDto>.Ok(resultDto);
         }
 
         public async Task<Result<bool>> DeleteAsync(int id)
         {
-            var existing = await _repo.GetByIdAsync(id);
-            if (existing == null) return Result<bool>.Fail($"MaintenanceReminder with id {id} not found");
+            var existing = await _repo.GetByIdWithDetailsAsync(id);
+            if (existing == null)
+                return Result<bool>.Fail($"MaintenanceReminder with id {id} not found");
 
             _repo.Delete(existing);
             await _uow.CompleteAsync();

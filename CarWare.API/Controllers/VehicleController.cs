@@ -9,6 +9,7 @@ using CarWare.Application.Interfaces;
 using CarWare.Domain.helper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CarWare.API.Controllers
 {
@@ -79,7 +80,11 @@ namespace CarWare.API.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> AddVehicle([FromBody] VehicleCreateDTO dto)
         {
-            var result = await _vehicleService.AddVehicleAsync(dto);
+            var userId = User.FindFirst("uid")?.Value;
+            if (userId == null)
+                return Unauthorized();
+
+            var result = await _vehicleService.AddVehicleAsync(dto, userId);
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));

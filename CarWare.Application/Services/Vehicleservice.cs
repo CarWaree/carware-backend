@@ -14,13 +14,13 @@ using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
 {
-    public class Vehicleservice : IVehicleService
+    public class VehicleService : IVehicleService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public Vehicleservice(IUnitOfWork unitOfWork, IMapper mapper,
+        public VehicleService(IUnitOfWork unitOfWork, IMapper mapper,
             UserManager<ApplicationUser> userManager)
         {
             _unitOfWork = unitOfWork;
@@ -72,7 +72,7 @@ namespace CarWare.Application.Services
         }
 
         // Add new vehicle
-        public async Task<Result<VehicleDTOs>> AddVehicleAsync(VehicleCreateDTO dto)
+        public async Task<Result<VehicleDTOs>> AddVehicleAsync(VehicleCreateDTO dto, string UserId)
         {
             var brand = (await _unitOfWork.Repository<Brand>()
                 .FindAsync(b => b.Id == dto.BrandId)).FirstOrDefault();
@@ -80,17 +80,20 @@ namespace CarWare.Application.Services
             var model = (await _unitOfWork.Repository<Model>()
                 .FindAsync(m => m.Id == dto.ModelId)).FirstOrDefault();
 
-            var user = await _userManager.FindByIdAsync(dto.UserId);
+            var user = await _userManager.FindByIdAsync(UserId);
+            //var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (user == null)
+                return Result<VehicleDTOs>.Fail("User not found");
 
-            if (brand == null || model == null || user == null)
-                return Result<VehicleDTOs>.Fail("Invalid Brand, Model, or User.");
+            if (brand == null || model == null)
+                return Result<VehicleDTOs>.Fail("Invalid Brand, Model.");
 
             var existingVehicle = (await _unitOfWork.Repository<Vehicle>()
                         .FindAsync(v => v.BrandId == dto.BrandId
                        && v.ModelId == dto.ModelId
                        && v.Year == dto.Year
                        && v.Color == dto.Color
-                       && v.UserId == dto.UserId))
+                       && v.UserId == UserId))
                         .FirstOrDefault();
 
             if (existingVehicle != null)
@@ -103,7 +106,7 @@ namespace CarWare.Application.Services
                 ModelId = dto.ModelId,
                 Year = dto.Year,
                 Color = dto.Color,
-                UserId = dto.UserId
+                UserId = UserId
             };
 
             await _unitOfWork.Repository<Vehicle>().AddAsync(vehicle);

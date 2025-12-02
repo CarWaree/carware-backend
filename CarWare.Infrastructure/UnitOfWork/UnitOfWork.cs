@@ -15,8 +15,9 @@ namespace CarWare.Infrastructure.UnitOfWork
         private readonly ApplicationDbContext _dbContext;
         private Hashtable _repositories;
 
-        // Expose VehicleRepository
+        // Expose Repositories
         private IVehicleRepository _vehicleRepository;
+        private IMaintenanceRepository _maintenanceReminderRepository;
 
         public UnitOfWork(ApplicationDbContext dbContext)
         {
@@ -26,6 +27,10 @@ namespace CarWare.Infrastructure.UnitOfWork
 
         public IVehicleRepository VehicleRepository
             => _vehicleRepository ??= new VehicleRepository(_dbContext);
+
+        public IMaintenanceRepository MaintenanceRepository
+            => _maintenanceReminderRepository ??= new MaintenanceRepository(_dbContext);
+
 
         public async Task<int> CompleteAsync()
             => await _dbContext.SaveChangesAsync();
