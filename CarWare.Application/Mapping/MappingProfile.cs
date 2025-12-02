@@ -12,8 +12,9 @@ namespace CarWare.Application.Mapping
         {
             CreateMap<Vehicle, VehicleDTOs>()
                 .ForMember(dest => dest.BrandName, opt => opt.MapFrom(src => src.Brand.Name))
-                .ForMember(dest => dest.ModelName, opt => opt.MapFrom(src => src.Model.Name));
-            
+                .ForMember(dest => dest.ModelName, opt => opt.MapFrom(src => src.Model.Name))
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.user.UserName));
+
             CreateMap<VehicleCreateDTO, Vehicle>();
             CreateMap<Brand, BrandDTO>();
             CreateMap<Model, ModelDTO>()
@@ -24,5 +25,4 @@ namespace CarWare.Application.Mapping
 
         }
     }
-
 }

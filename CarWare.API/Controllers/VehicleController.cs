@@ -30,8 +30,8 @@ namespace CarWare.API.Controllers
         {
             var result = await _vehicleService.GetAllVehiclesAsync();
 
-            if (!result.Success)
-                return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
+        //    if (!result.Success)
+        //        return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
 
             return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
                 result.Data, "Vehicles retrieved successfully"
