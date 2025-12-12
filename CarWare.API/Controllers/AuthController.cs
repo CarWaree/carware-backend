@@ -5,7 +5,6 @@ using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -35,7 +34,6 @@ namespace CarWare.API.Controllers
             return Ok(ApiResponseGeneric<AuthDto>.Success(result.Data, "Registration successful"));
         }
 
-        //[Authorize]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {

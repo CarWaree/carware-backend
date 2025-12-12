@@ -7,6 +7,7 @@ using CarWare.Application.DTOs.Vehicle;
 using CarWare.Application.helper;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.helper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -31,8 +32,8 @@ namespace CarWare.API.Controllers
         {
             var result = await _vehicleService.GetAllVehiclesAsync();
 
-        //    if (!result.Success)
-        //        return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
+            if (!result.Success)
+                return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
 
             return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
                 result.Data, "Vehicles retrieved successfully"
@@ -77,12 +78,11 @@ namespace CarWare.API.Controllers
             ));
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> AddVehicle([FromBody] VehicleCreateDTO dto)
         {
             var userId = User.FindFirst("uid")?.Value;
-            if (userId == null)
-                return Unauthorized();
 
             var result = await _vehicleService.AddVehicleAsync(dto, userId);
 
