@@ -1,16 +1,10 @@
 ﻿using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using CarWare.API.Errors;
 using CarWare.API.Errors.NonGeneric;
-using CarWare.Application.Common;
 using CarWare.Application.DTOs.Vehicle;
-using CarWare.Application.helper;
 using CarWare.Application.Interfaces;
-using CarWare.Domain.helper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace CarWare.API.Controllers
 {
@@ -21,13 +15,15 @@ namespace CarWare.API.Controllers
         private readonly IVehicleService _vehicleService;
         private readonly IMapper _mapper;
 
+        private string userId => User.FindFirst("uid")?.Value;
+
         public VehicleController(IVehicleService vehicleService, IMapper mapper)
         {
             _vehicleService = vehicleService;
             _mapper = mapper;
         }
 
-        [HttpGet]
+        [HttpGet("all")]
         public async Task<ActionResult> GetAll()
         {
             var result = await _vehicleService.GetAllVehiclesAsync();
@@ -38,6 +34,16 @@ namespace CarWare.API.Controllers
             return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
                 result.Data, "Vehicles retrieved successfully"
             ));
+        }
+
+        [Authorize]
+        [HttpGet("my-vehicles")]
+        public async Task<ActionResult> GetMyVehiclesAsync()
+        {
+            var userId = User.FindFirst("uid")?.Value;
+
+            var result = await _vehicleService.GetMyVehiclesAsync(userId);
+            return Ok(result);
         }
 
         [HttpGet("brands")]
@@ -82,8 +88,6 @@ namespace CarWare.API.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> AddVehicle([FromBody] VehicleCreateDTO dto)
         {
-            var userId = User.FindFirst("uid")?.Value;
-
             var result = await _vehicleService.AddVehicleAsync(dto, userId);
 
             if (!result.Success)
@@ -95,10 +99,10 @@ namespace CarWare.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse>> UpdateVehicle(int id, [FromBody] VehicleDTOs dto)
+        public async Task<ActionResult<ApiResponse>> UpdateVehicle(int id, [FromBody]VehicleCreateDTO dto)
         {
-            dto.Id = id;
-            var result = await _vehicleService.UpdateVehicleAsync(dto);
+            dto.id = id;
+            var result = await _vehicleService.UpdateVehicleAsync(dto, userId);
 
             if (!result.Success)
                 return NotFound(ApiResponse.Fail(result.Error!, 404));
@@ -109,7 +113,7 @@ namespace CarWare.API.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse>> DeleteVehicle(int id)
         {
-            var result = await _vehicleService.DeleteVehicleAsync(id);
+            var result = await _vehicleService.DeleteVehicleAsync(id, userId);
 
             if (!result.Success)
                 return NotFound(ApiResponse.Fail(result.Error!, 404));

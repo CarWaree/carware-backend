@@ -41,6 +41,16 @@ namespace CarWare.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<Vehicle>> GetVehiclesByUserIdAsync(string userId)
+        {
+            return await _dbContext.vehicles
+                .Where(v => v.UserId == userId)
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.user)
+                .ToListAsync();
+        }
+
         public async Task<List<Model>> GetModelsByBrandAsync(int brandId)
         {
             var models = await _dbContext.models

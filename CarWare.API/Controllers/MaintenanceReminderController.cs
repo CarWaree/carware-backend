@@ -3,7 +3,6 @@ using CarWare.API.Errors;
 using CarWare.API.Errors.NonGeneric;
 using CarWare.Application.DTOs.maintenanceReminder;
 using CarWare.Application.Interfaces;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CarWare.API.Controllers
@@ -20,8 +19,9 @@ namespace CarWare.API.Controllers
             _reminderService = reminderService;
             _mapper = mapper;
         }
+        private string userId => User.FindFirst("uid")?.Value;
 
-        [HttpGet]
+        [HttpGet("all")]
         public async Task<ActionResult> GetAll()
         {
             var result = await _reminderService.GetAllAsync();
@@ -37,7 +37,7 @@ namespace CarWare.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult> GetById(int id)
         {
-            var result = await _reminderService.GetByIdAsync(id);
+            var result = await _reminderService.GetByIdAsync(id, userId);
 
             if (!result.Success)
                 return NotFound(ApiResponse.Fail(result.Error!, 404));
@@ -51,7 +51,7 @@ namespace CarWare.API.Controllers
         [HttpPost]
         public async Task<ActionResult> AddReminder([FromBody] CreateMaintenanceReminderDto dto)
         {
-            var result = await _reminderService.AddAsync(dto);
+            var result = await _reminderService.AddAsync(dto, userId);
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
@@ -65,7 +65,7 @@ namespace CarWare.API.Controllers
         public async Task<ActionResult> UpdateReminder(int id, [FromBody] UpdateMaintenanceReminderDto dto)
         {
             dto.Id = id;
-            var result = await _reminderService.UpdateAsync(dto);
+            var result = await _reminderService.UpdateAsync(dto, userId);
 
             if (!result.Success)
                 return NotFound(ApiResponse.Fail(result.Error!, 404));
@@ -76,7 +76,7 @@ namespace CarWare.API.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteReminder(int id)
         {
-            var result = await _reminderService.DeleteAsync(id);
+            var result = await _reminderService.DeleteAsync(id, userId);
 
             if (!result.Success)
                 return NotFound(ApiResponse.Fail(result.Error!, 404));
@@ -84,10 +84,10 @@ namespace CarWare.API.Controllers
             return Ok(ApiResponse.Success("Maintenance reminder deleted successfully"));
         }
 
-        [HttpGet("upcoming")]
+        [HttpGet("my/upcoming")]
         public async Task<ActionResult> UpcomingReminders(int days = 7)
         {
-            var result = await _reminderService.UpcomingMaintenanceAsync(days);
+            var result = await _reminderService.UpcomingMaintenanceAsync(userId, days);
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
@@ -100,7 +100,7 @@ namespace CarWare.API.Controllers
         [HttpGet("vehicle/{vehicleId}")]
         public async Task<ActionResult> GetByVehicle(int vehicleId)
         {
-            var result = await _reminderService.GetAllByCarAsync(vehicleId);
+            var result = await _reminderService.GetAllByCarAsync(vehicleId, userId);
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));

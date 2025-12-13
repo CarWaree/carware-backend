@@ -9,6 +9,7 @@ namespace CarWare.Domain.Interfaces
         Task<List<Vehicle>> GetAllCarsWithDetailsAsync();
         Task<Vehicle?> GetCarByIdWithDetailsAsync(int id);
         Task<List<Vehicle>> GetAllVehiclesAsync();
+        Task<List<Vehicle>> GetVehiclesByUserIdAsync(string userId);
         Task<List<Model>> GetModelsByBrandAsync(int brandId);
     }
 }

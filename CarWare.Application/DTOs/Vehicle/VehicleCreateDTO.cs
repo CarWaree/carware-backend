@@ -4,6 +4,7 @@ namespace CarWare.Application.DTOs.Vehicle
 {
     public class VehicleCreateDTO
     {
+        public int id { get; set; }
         [Required]
         public int BrandId { get; set; }
         [Required]

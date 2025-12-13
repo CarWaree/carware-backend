@@ -8,7 +8,6 @@ using CarWare.Domain.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
@@ -28,22 +27,34 @@ namespace CarWare.Application.Services
         public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllAsync()
         {
             var entities = await _repo.GetAllWithDetailsAsync();
+
+            if (!entities.Any())
+                return Result<IEnumerable<MaintenanceReminderResponseDto>>
+                    .Fail("No maintenance reminders found.");
+
             var dtos = _mapper.Map<IEnumerable<MaintenanceReminderResponseDto>>(entities);
             return Result<IEnumerable<MaintenanceReminderResponseDto>>.Ok(dtos);
         }
 
-        public async Task<Result<MaintenanceReminderResponseDto>> GetByIdAsync(int id)
+        public async Task<Result<MaintenanceReminderResponseDto>> GetByIdAsync(int id, string userId)
         {
             var entity = await _repo.GetByIdWithDetailsAsync(id);
-            if (entity == null)
-                return Result<MaintenanceReminderResponseDto>.Fail($"MaintenanceReminder with id {id} not found");
+            if (entity == null || entity.Vehicle.UserId != userId)
+                return Result<MaintenanceReminderResponseDto>.Fail($"MaintenanceReminder with id {id} not found or access denied.");
 
             var dto = _mapper.Map<MaintenanceReminderResponseDto>(entity);
             return Result<MaintenanceReminderResponseDto>.Ok(dto);
         }
 
-        public async Task<Result<MaintenanceReminderResponseDto>> AddAsync(CreateMaintenanceReminderDto dto)
+        public async Task<Result<MaintenanceReminderResponseDto>> AddAsync(CreateMaintenanceReminderDto dto, string userId)
         {
+            var vehicle = await _uow.Repository<Vehicle>()
+                .GetByIdAsync(dto.VehicleId);
+
+            if (vehicle == null || vehicle.UserId != userId)
+                return Result<MaintenanceReminderResponseDto>
+                    .Fail("Invalid vehicle or access denied.");
+
             var entity = _mapper.Map<MaintenanceReminder>(dto);
             entity.CreatedAt = DateTime.UtcNow;
 
@@ -56,11 +67,12 @@ namespace CarWare.Application.Services
             return Result<MaintenanceReminderResponseDto>.Ok(resultDto);
         }
 
-        public async Task<Result<MaintenanceReminderResponseDto>> UpdateAsync(UpdateMaintenanceReminderDto dto)
+        public async Task<Result<MaintenanceReminderResponseDto>> UpdateAsync(UpdateMaintenanceReminderDto dto, string userId)
         {
             var existing = await _repo.GetByIdWithDetailsAsync(dto.Id);
-            if (existing == null)
-                return Result<MaintenanceReminderResponseDto>.Fail($"MaintenanceReminder with id {dto.Id} not found");
+            if (existing == null || existing.Vehicle.UserId != userId)
+                return Result<MaintenanceReminderResponseDto>
+                    .Fail($"MaintenanceReminder with id {dto.Id} not found or access denied.");
 
             _mapper.Map(dto, existing);
             existing.UpdatedAt = DateTime.UtcNow;
@@ -74,11 +86,11 @@ namespace CarWare.Application.Services
             return Result<MaintenanceReminderResponseDto>.Ok(resultDto);
         }
 
-        public async Task<Result<bool>> DeleteAsync(int id)
+        public async Task<Result<bool>> DeleteAsync(int id, string userId)
         {
             var existing = await _repo.GetByIdWithDetailsAsync(id);
-            if (existing == null)
-                return Result<bool>.Fail($"MaintenanceReminder with id {id} not found");
+            if (existing == null || existing.Vehicle.UserId != userId)
+                return Result<bool>.Fail($"MaintenanceReminder with id {id} not found or access denied.");
 
             _repo.Delete(existing);
             await _uow.CompleteAsync();
@@ -86,19 +98,26 @@ namespace CarWare.Application.Services
             return Result<bool>.Ok(true);
         }
 
-        public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(int days = 7)
+        public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(string userId, int days = 7)
         {
             var now = DateTime.UtcNow;
             var until = now.AddDays(days);
 
-            var list = await _repo.FindAsync(m => m.NextDueDate >= now && m.NextDueDate <= until);
+            var list = await _repo.FindAsync(m => m.NextDueDate >= now && m.NextDueDate <= until && m.Vehicle.UserId == userId);
             var dtos = _mapper.Map<IEnumerable<MaintenanceReminderResponseDto>>(list);
 
             return Result<IEnumerable<MaintenanceReminderResponseDto>>.Ok(dtos);
         }
 
-        public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllByCarAsync(int vehicleId)
+        public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllByCarAsync(int vehicleId, string userId)
         {
+            var vehicle = await _uow.Repository<Vehicle>()
+                .GetByIdAsync(vehicleId);
+
+            if (vehicle == null || vehicle.UserId != userId)
+                return Result<IEnumerable<MaintenanceReminderResponseDto>>
+                    .Fail("Vehicle not found or access denied.");
+
             var list = await _repo.FindAsync(m => m.VehicleId == vehicleId);
             var dtos = _mapper.Map<IEnumerable<MaintenanceReminderResponseDto>>(list);
 

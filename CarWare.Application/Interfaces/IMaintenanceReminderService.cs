@@ -11,11 +11,11 @@ namespace CarWare.Application.Interfaces
     public interface IMaintenanceReminderService
     {
         Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllAsync();
-        Task<Result<MaintenanceReminderResponseDto>> GetByIdAsync(int id);
-        Task<Result<MaintenanceReminderResponseDto>> AddAsync(CreateMaintenanceReminderDto dto);
-        Task<Result<MaintenanceReminderResponseDto>> UpdateAsync(UpdateMaintenanceReminderDto dto);
-        Task<Result<bool>> DeleteAsync(int id);
-        Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(int days = 7);
-        Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllByCarAsync(int vehicleId);
+        Task<Result<MaintenanceReminderResponseDto>> GetByIdAsync(int id, string userId);
+        Task<Result<MaintenanceReminderResponseDto>> AddAsync(CreateMaintenanceReminderDto dto, string userId);
+        Task<Result<MaintenanceReminderResponseDto>> UpdateAsync(UpdateMaintenanceReminderDto dto, string userId);
+        Task<Result<bool>> DeleteAsync(int id, string userId);
+        Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(string userId, int days = 7);
+        Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllByCarAsync(int vehicleId, string userId);
     }
 }

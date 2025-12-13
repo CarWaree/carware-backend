@@ -4,10 +4,7 @@ using CarWare.Application.DTOs.Vehicle;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
-using CarWare.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -28,12 +25,27 @@ namespace CarWare.Application.Services
             _userManager = userManager;
         }
 
-        // Get All Vehicles
+        // Get All Vehicles (Admin)
         public async Task<Result<List<VehicleDTOs>>> GetAllVehiclesAsync()
         {
             var vehicles = await _unitOfWork.VehicleRepository.GetAllVehiclesAsync();
             if(vehicles == null || !vehicles.Any())
                 return Result<List<VehicleDTOs>>.Fail("No vehicles found.");
+
+            var dto = _mapper.Map<List<VehicleDTOs>>(vehicles);
+            return Result<List<VehicleDTOs>>.Ok(dto);
+        }
+
+        // Get My Vehicles 
+        public async Task<Result<List<VehicleDTOs>>> GetMyVehiclesAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+
+            var vehicles = await _unitOfWork.VehicleRepository
+                .GetVehiclesByUserIdAsync(userId);
+
+            if (vehicles == null || !vehicles.Any())
+                return Result<List<VehicleDTOs>>.Fail("You have no vehicles.");
 
             var dto = _mapper.Map<List<VehicleDTOs>>(vehicles);
             return Result<List<VehicleDTOs>>.Ok(dto);
@@ -59,7 +71,7 @@ namespace CarWare.Application.Services
             return Result<List<ModelDTO>>.Ok(mapped);
         }
 
-        // Get vehicle by ID
+        // Get vehicle by ID (User)
         public async Task<Result<VehicleDTOs>> GetVehicleByIdAsync(int id)
         {
             var vehicle = await _unitOfWork.VehicleRepository.GetCarByIdWithDetailsAsync(id);
@@ -71,7 +83,7 @@ namespace CarWare.Application.Services
             return Result<VehicleDTOs>.Ok(dto);
         }
 
-        // Add new vehicle
+        // Add vehicle
         public async Task<Result<VehicleDTOs>> AddVehicleAsync(VehicleCreateDTO dto, string UserId)
         {
             var brand = (await _unitOfWork.Repository<Brand>()
@@ -81,7 +93,6 @@ namespace CarWare.Application.Services
                 .FindAsync(m => m.Id == dto.ModelId)).FirstOrDefault();
 
             var user = await _userManager.FindByIdAsync(UserId);
-            //var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (user == null)
                 return Result<VehicleDTOs>.Fail("User not found");
 
@@ -118,32 +129,40 @@ namespace CarWare.Application.Services
         }
 
         // Update vehicle
-        public async Task<Result<bool>> UpdateVehicleAsync(VehicleDTOs dto)
+        public async Task<Result<bool>> UpdateVehicleAsync(VehicleCreateDTO dto, string userId)
         {
-            var repo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = await repo.GetByIdAsync(dto.Id);
+            var vehicle = (await _unitOfWork.Repository<Vehicle>()
+                .FindAsync(v => v.Id == dto.id && v.UserId == userId))
+                .FirstOrDefault();
 
             if (vehicle == null)
-                return Result<bool>.Fail("Vehicle not found");
+                return Result<bool>.Fail("Vehicle not found or access denied.");
+
+            var brand = await _unitOfWork.Repository<Brand>().FindAsync(b => b.Id == dto.BrandId);
+            if (!brand.Any())
+                return Result<bool>.Fail("Brand not found.");
+
+            var model = await _unitOfWork.Repository<Model>().FindAsync(m => m.Id == dto.ModelId);
+            if (!model.Any())
+                return Result<bool>.Fail("Model not found.");
 
             _mapper.Map(dto, vehicle);
-
-            repo.Update(vehicle);
             await _unitOfWork.CompleteAsync();
 
             return Result<bool>.Ok(true);
         }
 
         // Delete vehicle
-        public async Task<Result<bool>> DeleteVehicleAsync(int id)
+        public async Task<Result<bool>> DeleteVehicleAsync(int id, string userId)
         {
-            var repo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = await repo.GetByIdAsync(id);
+            var vehicle = (await _unitOfWork.Repository<Vehicle>()
+                .FindAsync(v => v.Id == id && v.UserId == userId))
+                .FirstOrDefault();
 
             if (vehicle == null)
-                return Result<bool>.Fail("Vehicle not found");
+                return Result<bool>.Fail("Vehicle not found or access denied.");
 
-            repo.Delete(vehicle);
+            _unitOfWork.Repository<Vehicle>().Delete(vehicle);
             await _unitOfWork.CompleteAsync();
 
             return Result<bool>.Ok(true);
