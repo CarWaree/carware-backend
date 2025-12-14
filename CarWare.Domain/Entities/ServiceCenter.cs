@@ -13,5 +13,6 @@ namespace CarWare.Domain.Entities
 
         public ICollection<ProviderServices> ProviderServices { get; set; } = new List<ProviderServices>();
 
+        public ICollection<Appointment> Appointments { get; set; }
     }
 }
