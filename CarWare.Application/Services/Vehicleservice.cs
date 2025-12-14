@@ -129,26 +129,42 @@ namespace CarWare.Application.Services
         }
 
         // Update vehicle
-        public async Task<Result<bool>> UpdateVehicleAsync(VehicleCreateDTO dto, string userId)
+        public async Task<Result<bool>> UpdateVehicleAsync(VehicleUpdateDTO dto, string userId)
         {
             var vehicle = (await _unitOfWork.Repository<Vehicle>()
-                .FindAsync(v => v.Id == dto.id && v.UserId == userId))
+                .FindAsync(v => v.Id == dto.Id && v.UserId == userId))
                 .FirstOrDefault();
 
             if (vehicle == null)
                 return Result<bool>.Fail("Vehicle not found or access denied.");
 
-            var brand = await _unitOfWork.Repository<Brand>().FindAsync(b => b.Id == dto.BrandId);
-            if (!brand.Any())
-                return Result<bool>.Fail("Brand not found.");
+            // ✅ Check Brand only if changed
+            if (dto.BrandId.HasValue)
+            {
+                var brandExists = await _unitOfWork.Repository<Brand>()
+                    .AnyAsync(b => b.Id == dto.BrandId.Value);
 
-            var model = await _unitOfWork.Repository<Model>().FindAsync(m => m.Id == dto.ModelId);
-            if (!model.Any())
-                return Result<bool>.Fail("Model not found.");
+                if (!brandExists)
+                    return Result<bool>.Fail("Brand not found.");
+
+                vehicle.BrandId = dto.BrandId.Value;
+            }
+
+            // Check Model only if changed
+            if (dto.ModelId.HasValue)
+            {
+                var modelExists = await _unitOfWork.Repository<Model>()
+                    .AnyAsync(m => m.Id == dto.ModelId.Value);
+
+                if (!modelExists)
+                    return Result<bool>.Fail("Model not found.");
+
+                vehicle.ModelId = dto.ModelId.Value;
+            }
 
             _mapper.Map(dto, vehicle);
-            await _unitOfWork.CompleteAsync();
 
+            await _unitOfWork.CompleteAsync();
             return Result<bool>.Ok(true);
         }
 

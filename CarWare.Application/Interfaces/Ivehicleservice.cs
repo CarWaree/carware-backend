@@ -13,7 +13,7 @@ namespace CarWare.Application.Interfaces
         Task<Result<List<ModelDTO>>> GetModelsByBrandsAsync(int brandId);
         Task<Result<VehicleDTOs>> GetVehicleByIdAsync(int id);
         Task<Result<VehicleDTOs>> AddVehicleAsync(VehicleCreateDTO dto, string UserId);
-        Task<Result<bool>> UpdateVehicleAsync(VehicleCreateDTO dto, string userId);
+        Task<Result<bool>> UpdateVehicleAsync(VehicleUpdateDTO dto, string userId);
         Task<Result<bool>> DeleteVehicleAsync(int id, string userId);
     }
 }

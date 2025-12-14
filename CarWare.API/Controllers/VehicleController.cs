@@ -43,7 +43,9 @@ namespace CarWare.API.Controllers
             var userId = User.FindFirst("uid")?.Value;
 
             var result = await _vehicleService.GetMyVehiclesAsync(userId);
-            return Ok(result);
+            return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
+                result.Data, "Vehicles retrieved successfully"
+            ));
         }
 
         [HttpGet("brands")]
@@ -99,9 +101,9 @@ namespace CarWare.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse>> UpdateVehicle(int id, [FromBody]VehicleCreateDTO dto)
+        public async Task<ActionResult<ApiResponse>> UpdateVehicle(int id, [FromBody] VehicleUpdateDTO dto)
         {
-            dto.id = id;
+            dto.Id = id;
             var result = await _vehicleService.UpdateVehicleAsync(dto, userId);
 
             if (!result.Success)

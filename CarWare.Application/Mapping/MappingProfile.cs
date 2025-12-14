@@ -17,6 +17,12 @@ namespace CarWare.Application.Mapping
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.user.UserName));
 
             CreateMap<VehicleCreateDTO, Vehicle>();
+            CreateMap<VehicleUpdateDTO, Vehicle>()
+                .ForMember(dest => dest.BrandId, opt => opt.Ignore())
+                .ForMember(dest => dest.ModelId, opt => opt.Ignore())
+                .ForAllMembers(opt =>
+                    opt.Condition((src, dest, srcMember) => srcMember != null));
+
             CreateMap<Brand, BrandDTO>();
             CreateMap<Model, ModelDTO>()
                 .ForMember(dest => dest.BrandName, opt => opt.MapFrom(src => src.Brand.Name));
