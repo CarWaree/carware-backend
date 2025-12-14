@@ -5,6 +5,7 @@ using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -103,7 +104,15 @@ namespace CarWare.Application.Services
             var now = DateTime.UtcNow;
             var until = now.AddDays(days);
 
-            var list = await _repo.FindAsync(m => m.NextDueDate >= now && m.NextDueDate <= until && m.Vehicle.UserId == userId);
+            var list = await _repo.Query()
+                .Include(m => m.Vehicle)
+                .Include(m => m.Type)
+                .Where(m =>
+                    m.NextDueDate >= now &&
+                    m.NextDueDate <= until &&
+                    m.Vehicle.UserId == userId)
+                .ToListAsync();
+
             var dtos = _mapper.Map<IEnumerable<MaintenanceReminderResponseDto>>(list);
 
             return Result<IEnumerable<MaintenanceReminderResponseDto>>.Ok(dtos);

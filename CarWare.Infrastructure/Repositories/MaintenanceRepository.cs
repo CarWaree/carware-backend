@@ -47,10 +47,15 @@ namespace CarWare.Infrastructure.Repositories
 
         }
 
-        public IQueryable<MaintenanceReminder> GetUpcomingQueryable()
+        public IQueryable<MaintenanceReminder> GetUpcomingQueryable(int days = 7)
         {
+            var now = DateTime.UtcNow.Date;
+            var until = now.AddDays(days);
+
             var today = DateTime.UtcNow;
-            return _dbContext.maintenances.Where(m => m.NextDueDate > today).OrderBy(m => m.NextDueDate);
+            return _dbContext.maintenances
+                .Where(m => m.NextDueDate > today && m.NextDueDate <= until)
+                .OrderBy(m => m.NextDueDate);
         }
     }
 }
