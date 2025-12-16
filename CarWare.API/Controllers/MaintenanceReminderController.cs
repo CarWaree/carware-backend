@@ -3,6 +3,7 @@ using CarWare.API.Errors;
 using CarWare.API.Errors.NonGeneric;
 using CarWare.Application.DTOs.maintenanceReminder;
 using CarWare.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CarWare.API.Controllers
@@ -21,7 +22,8 @@ namespace CarWare.API.Controllers
         }
         private string userId => User.FindFirst("uid")?.Value;
 
-        [HttpGet("all")]
+        [Authorize]
+        [HttpGet("my")]
         public async Task<ActionResult> GetAll()
         {
             var result = await _reminderService.GetAllAsync();
@@ -84,6 +86,7 @@ namespace CarWare.API.Controllers
             return Ok(ApiResponse.Success("Maintenance reminder deleted successfully"));
         }
 
+        [Authorize]
         [HttpGet("my/upcoming")]
         public async Task<ActionResult> UpcomingReminders(int days = 7)
         {

@@ -138,7 +138,7 @@ namespace CarWare.Application.Services
             if (vehicle == null)
                 return Result<bool>.Fail("Vehicle not found or access denied.");
 
-            // ✅ Check Brand only if changed
+            // Check Brand only if changed
             if (dto.BrandId.HasValue)
             {
                 var brandExists = await _unitOfWork.Repository<Brand>()

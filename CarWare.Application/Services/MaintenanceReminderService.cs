@@ -17,17 +17,15 @@ namespace CarWare.Application.Services
     {
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
-        private readonly IMaintenanceRepository _repo;
 
         public MaintenanceReminderService(IUnitOfWork uow, IMapper mapper)
         {
             _uow = uow;
             _mapper = mapper;
-            _repo = _uow.MaintenanceRepository;
         }
         public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllAsync()
         {
-            var entities = await _repo.GetAllWithDetailsAsync();
+            var entities = await _uow.MaintenanceRepository.GetAllWithDetailsAsync();
 
             if (!entities.Any())
                 return Result<IEnumerable<MaintenanceReminderResponseDto>>
@@ -39,7 +37,7 @@ namespace CarWare.Application.Services
 
         public async Task<Result<MaintenanceReminderResponseDto>> GetByIdAsync(int id, string userId)
         {
-            var entity = await _repo.GetByIdWithDetailsAsync(id);
+            var entity = await _uow.MaintenanceRepository.GetByIdWithDetailsAsync(id);
             if (entity == null || entity.Vehicle.UserId != userId)
                 return Result<MaintenanceReminderResponseDto>.Fail($"MaintenanceReminder with id {id} not found or access denied.");
 
@@ -59,10 +57,10 @@ namespace CarWare.Application.Services
             var entity = _mapper.Map<MaintenanceReminder>(dto);
             entity.CreatedAt = DateTime.UtcNow;
 
-            await _repo.AddAsync(entity);
+            await _uow.MaintenanceRepository.AddAsync(entity);
             await _uow.CompleteAsync();
 
-            var entityWithDetails = await _repo.GetByIdWithDetailsAsync(entity.Id);
+            var entityWithDetails = await _uow.MaintenanceRepository.GetByIdWithDetailsAsync(entity.Id);
             var resultDto = _mapper.Map<MaintenanceReminderResponseDto>(entityWithDetails);
 
             return Result<MaintenanceReminderResponseDto>.Ok(resultDto);
@@ -70,7 +68,7 @@ namespace CarWare.Application.Services
 
         public async Task<Result<MaintenanceReminderResponseDto>> UpdateAsync(UpdateMaintenanceReminderDto dto, string userId)
         {
-            var existing = await _repo.GetByIdWithDetailsAsync(dto.Id);
+            var existing = await _uow.MaintenanceRepository.GetByIdWithDetailsAsync(dto.Id);
             if (existing == null || existing.Vehicle.UserId != userId)
                 return Result<MaintenanceReminderResponseDto>
                     .Fail($"MaintenanceReminder with id {dto.Id} not found or access denied.");
@@ -78,10 +76,10 @@ namespace CarWare.Application.Services
             _mapper.Map(dto, existing);
             existing.UpdatedAt = DateTime.UtcNow;
 
-            _repo.Update(existing);
+            _uow.MaintenanceRepository.Update(existing);
             await _uow.CompleteAsync();
 
-            var updatedEntity = await _repo.GetByIdWithDetailsAsync(existing.Id);
+            var updatedEntity = await _uow.MaintenanceRepository.GetByIdWithDetailsAsync(existing.Id);
             var resultDto = _mapper.Map<MaintenanceReminderResponseDto>(updatedEntity);
 
             return Result<MaintenanceReminderResponseDto>.Ok(resultDto);
@@ -89,11 +87,11 @@ namespace CarWare.Application.Services
 
         public async Task<Result<bool>> DeleteAsync(int id, string userId)
         {
-            var existing = await _repo.GetByIdWithDetailsAsync(id);
+            var existing = await _uow.MaintenanceRepository.GetByIdWithDetailsAsync(id);
             if (existing == null || existing.Vehicle.UserId != userId)
                 return Result<bool>.Fail($"MaintenanceReminder with id {id} not found or access denied.");
 
-            _repo.Delete(existing);
+            _uow.MaintenanceRepository.Delete(existing);
             await _uow.CompleteAsync();
 
             return Result<bool>.Ok(true);
@@ -101,19 +99,21 @@ namespace CarWare.Application.Services
 
         public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(string userId, int days = 7)
         {
-            var now = DateTime.UtcNow;
-            var until = now.AddDays(days);
+            var today = DateTime.UtcNow.Date;
+            var until = today.AddDays(days + 1).AddTicks(-1);
 
-            var list = await _repo.Query()
-                .Include(m => m.Vehicle)
-                .Include(m => m.Type)
-                .Where(m =>
-                    m.NextDueDate >= now &&
-                    m.NextDueDate <= until &&
-                    m.Vehicle.UserId == userId)
-                .ToListAsync();
+            var reminders = await _uow.MaintenanceRepository
+                .GetUpcomingQueryable(days)
+                    .Where(m => m.Vehicle.UserId == userId)
+                    .Include(m => m.Vehicle)
+                    .Include(m => m.Type)
+                    .ToListAsync();
 
-            var dtos = _mapper.Map<IEnumerable<MaintenanceReminderResponseDto>>(list);
+            if (!reminders.Any())
+                return Result<IEnumerable<MaintenanceReminderResponseDto>>
+                    .Fail("No upcoming maintenance reminders");
+
+            var dtos = _mapper.Map<IEnumerable<MaintenanceReminderResponseDto>>(reminders);
 
             return Result<IEnumerable<MaintenanceReminderResponseDto>>.Ok(dtos);
         }
@@ -127,11 +127,15 @@ namespace CarWare.Application.Services
                 return Result<IEnumerable<MaintenanceReminderResponseDto>>
                     .Fail("Vehicle not found or access denied.");
 
-            var list = await _repo.FindAsync(m => m.VehicleId == vehicleId);
+            var list = await _uow.MaintenanceRepository.GetByVehicleWithDetailsAsync(vehicleId);
+
+            if (!list.Any())
+                return Result<IEnumerable<MaintenanceReminderResponseDto>>
+                    .Fail("No maintenance reminders found for this vehicle.");
+
             var dtos = _mapper.Map<IEnumerable<MaintenanceReminderResponseDto>>(list);
 
             return Result<IEnumerable<MaintenanceReminderResponseDto>>.Ok(dtos);
         }
     }
 }
-

@@ -9,7 +9,7 @@ namespace CarWare.Domain.Interfaces
       {
         Task<IEnumerable<MaintenanceReminder>> GetAllWithDetailsAsync();
         Task<MaintenanceReminder?> GetByIdWithDetailsAsync(int id);
-        IQueryable<MaintenanceReminder> GetByVehicleIdQueryable(int vehicleId);
+        Task<IEnumerable<MaintenanceReminder>> GetByVehicleWithDetailsAsync(int vehicleId);
         IQueryable<MaintenanceReminder> GetUpcomingQueryable(int days = 7);
       }
 }
