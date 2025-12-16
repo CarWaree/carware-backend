@@ -118,32 +118,27 @@ namespace CarWare.Application.Services
 
             await _userManager.AddToRoleAsync(user, "User");
 
-            // 🔐 3. Generate OTP
-            var otpBytes = new byte[4];
-            using (var rng = RandomNumberGenerator.Create())
-                rng.GetBytes(otpBytes);
+            // 5. Generate email confirmation token
+            var emailToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-            var otp = (BitConverter.ToUInt32(otpBytes, 0) % 900000 + 100000).ToString();
+            // 6. Build verification URL (frontend link)
+            var frontendUrl = _config["App:FrontendUrl"];
+            var verificationUrl = $"{frontendUrl}/verify-email?userId={user.Id}&token={Uri.EscapeDataString(emailToken)}";
 
-            // 4. Store OTP in cache (email-based)
-            await _cache.SetStringAsync(
-                $"email_verify_otp:{user.Email}",
-                otp,
-                new DistributedCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(3)
-                });
-
-            // 5. Send OTP email
-            await _emailSender.SendEmailAsync(
-                user.Email,
-                "Verify Your Email",
-                $"Hello {user.FirstName},<br/>Your verification code is <b>{otp}</b>.<br/>It expires in 3 minutes."
-            );
+            // 7. Send verification email
+            await _emailSender.SendEmailAsync(user.Email,
+                "Verify your email",
+                $"Hello {user.FirstName},<br/><br/>" +
+                $"Please confirm your email by clicking the link below:<br/>" +
+                $"<a href='{verificationUrl}'>Verify Email</a><br/><br/>" +
+                "Thank you!");
 
             // 6. Return response (not authenticated yet)
             var authDto = _mapper.Map<AuthDto>(user);
-            authDto.IsAuthenticated = false;
+            authDto.IsAuthenticated = false; // must verify email first
+            authDto.Roles = new List<string>(); // no JWT yet
+            authDto.Token = null;
+            authDto.ExpiresOn = null;
 
             return Result<AuthDto>.Ok(authDto);
         }
@@ -156,12 +151,10 @@ namespace CarWare.Application.Services
 
             if (user is null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
                 return Result<AuthDto>.Fail("Invalid Username or Password");
-
             
-            //verfiy before login
-            if (!user.EmailConfirmed)
-                return Result<AuthDto>.Fail("Please verify your email before logging in.");
-
+            ////verfiy before login
+            //if (!user.EmailConfirmed)
+            //    return Result<AuthDto>.Fail("Please verify your email before logging in.");
 
             var jwtSecurityToken = await CreateJwtToken(user);
             var rolesList = await _userManager.GetRolesAsync(user);

@@ -1,5 +1,6 @@
 ﻿using CarWare.Application.Common;
 using CarWare.Application.DTOs.Maintenance;
+using CarWare.Application.DTOs.maintenanceReminder;
 using CarWare.Domain.helper;
 using System;
 using System.Collections.Generic;
@@ -11,11 +12,15 @@ namespace CarWare.Application.Interfaces
 {
     public interface IMaintenanceService
     {
-        Task<MaintenanceDto> AddAsync(MaintenanceDto dto);
-        Task<Pagination<MaintenanceDto>> GetByVehicleIdAsync(int vehicleId, PaginationParameters pagination);
-        Task<Pagination<MaintenanceDto>> GetUpcomingAsync(PaginationParameters pagination);
-        Task<MaintenanceDto?> UpdateAsync(int id, MaintenanceDto dto);
-        Task<bool> DeleteAsync(int id);
-       
-    }
+        Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllAsync();
+        Task<Result<MaintenanceReminderResponseDto>> GetByIdAsync(int id);
+        Task<Result<MaintenanceReminderResponseDto>> AddAsync(CreateMaintenanceReminderDto dto);
+        Task<Result<MaintenanceReminderResponseDto>> UpdateAsync(UpdateMaintenanceReminderDto dto);
+        Task<Result<bool>> DeleteAsync(int id);
+        Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(int days = 7);
+        Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllByCarAsync(int vehicleId);
+    
 }
+
+}
+

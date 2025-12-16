@@ -19,16 +19,48 @@ namespace CarWare.Infrastructure.Repositories
             _dbContext = dbContext;
         }
 
-        public IQueryable<MaintenanceReminder> GetByVehicleIdQueryable(int vehicleId)
+        public async Task<MaintenanceReminder?> GetByIdWithDetailsAsync(int id)
         {
-            return _dbContext.maintenances.Where(m => m.VehicleId == vehicleId);
-
+            return await _dbContext.maintenances
+                .Include(r => r.Type)
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .FirstOrDefaultAsync(r => r.Id == id);
         }
 
-        public IQueryable<MaintenanceReminder> GetUpcomingQueryable()
+        public async Task<IEnumerable<MaintenanceReminder>> GetAllWithDetailsAsync()
         {
-            var today = DateTime.UtcNow;
-            return _dbContext.maintenances.Where(m => m.NextDueDate > today).OrderBy(m => m.NextDueDate);
+            return await _dbContext.maintenances
+                .Include(r => r.Type)
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<MaintenanceReminder>> GetByVehicleWithDetailsAsync(int vehicleId)
+        {
+            return await _dbContext.maintenances
+                .Include(m => m.Type)
+                .Include(v => v.Vehicle)
+                .Where(v => v.VehicleId == vehicleId)
+                .ToListAsync();
+                
+        }
+
+        public IQueryable<MaintenanceReminder> GetUpcomingQueryable(int days = 7)
+        {
+            var today = DateTime.UtcNow.Date;
+            var until = today.AddDays(days + 1).AddTicks(-1);
+
+            return _dbContext.maintenances
+                .Where(m =>
+                    m.NextDueDate >= today &&
+                    m.NextDueDate <= until)
+                .OrderBy(m => m.NextDueDate);
         }
     }
 }

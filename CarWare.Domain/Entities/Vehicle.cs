@@ -20,6 +20,8 @@ public class Vehicle : BaseEntity
     public ApplicationUser user { get; set; }
 
     public ICollection<MaintenanceReminder> maintenances { get; set; }
+    public ICollection<Appointment> Appointments { get; set; }
+
 
     [Required]
     public int Year { get; set; }

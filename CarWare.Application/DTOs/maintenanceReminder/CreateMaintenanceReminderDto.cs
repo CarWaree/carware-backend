@@ -5,23 +5,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CarWare.Application.DTOs.Maintenance
+namespace CarWare.Application.DTOs.maintenanceReminder
 {
-    public class MaintenanceDto
+    public class CreateMaintenanceReminderDto
     {
-        public int? MaintenanceId { get; set; }   
-        [Required]  
-
-        public string TypeOfMaintenance { get; set; }
-
         [Required]
         public DateTime NotificationDate { get; set; }
-
         [Required]
         public DateTime NextDueDate { get; set; }
 
-        public DateTime? CreatedAt { get; set; }  
-        public DateTime? UpdatedAt { get; set; }  
+        [Required]
+        public int TypeId { get; set; }
 
         [Required]
         public int VehicleId { get; set; }

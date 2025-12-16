@@ -19,7 +19,7 @@ namespace CarWare.Infrastructure.Context
         public DbSet<MaintenanceType> maintenanceTypes { get; set; }
         public DbSet<ServiceCenter> ServiceCenters { get; set; }
         public DbSet<ProviderServices> ProviderServices { get; set; }
-        public DbSet<MaintenanceType> MaintenanceTypes { get; set; }
+        public DbSet<Appointment> Appointments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -95,6 +95,21 @@ namespace CarWare.Infrastructure.Context
                 new ServiceCenter { Id = 4, Name = "Provider 4", Location = "6th October", Phone = "01233445566" },
                 new ServiceCenter { Id = 5, Name = "Provider 5", Location = "Dokki", Phone = "01099887766" }
             );
+
+            builder.Entity<Appointment>()
+                .HasOne(a => a.user)
+                .WithMany(u => u.Appointments)
+                .HasForeignKey(a => a.UserId);
+
+            builder.Entity<Appointment>()
+                .HasOne(a => a.Vehicle)
+                .WithMany(v => v.Appointments)
+                .HasForeignKey(a => a.VehicleId);
+
+            builder.Entity<Appointment>()
+                .HasOne(a => a.ServiceCenter)
+                .WithMany(s => s.Appointments)
+                .HasForeignKey(a => a.ServiceCenterId);
         }
     }
 }

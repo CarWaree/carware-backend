@@ -4,29 +4,49 @@ using CarWare.Application.DTOs.Vehicle;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
-using CarWare.Infrastructure.Repositories;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
 {
-    public class Vehicleservice : IVehicleService
+    public class VehicleService : IVehicleService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public Vehicleservice(IUnitOfWork unitOfWork, IMapper mapper)
+        public VehicleService(IUnitOfWork unitOfWork, IMapper mapper,
+            UserManager<ApplicationUser> userManager)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _userManager = userManager;
         }
 
-        // Get All Vehicles
+        // Get All Vehicles (Admin)
         public async Task<Result<List<VehicleDTOs>>> GetAllVehiclesAsync()
         {
-            var vehicles = await _unitOfWork.Repository<Vehicle>().GetAllAsync();
+            var vehicles = await _unitOfWork.VehicleRepository.GetAllVehiclesAsync();
+            if(vehicles == null || !vehicles.Any())
+                return Result<List<VehicleDTOs>>.Fail("No vehicles found.");
+
+            var dto = _mapper.Map<List<VehicleDTOs>>(vehicles);
+            return Result<List<VehicleDTOs>>.Ok(dto);
+        }
+
+        // Get My Vehicles 
+        public async Task<Result<List<VehicleDTOs>>> GetMyVehiclesAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+
+            var vehicles = await _unitOfWork.VehicleRepository
+                .GetVehiclesByUserIdAsync(userId);
+
+            if (vehicles == null || !vehicles.Any())
+                return Result<List<VehicleDTOs>>.Fail("You have no vehicles.");
+
             var dto = _mapper.Map<List<VehicleDTOs>>(vehicles);
             return Result<List<VehicleDTOs>>.Ok(dto);
         }
@@ -51,11 +71,10 @@ namespace CarWare.Application.Services
             return Result<List<ModelDTO>>.Ok(mapped);
         }
 
-        // Get vehicle by ID
+        // Get vehicle by ID (User)
         public async Task<Result<VehicleDTOs>> GetVehicleByIdAsync(int id)
         {
-            var repo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = await repo.GetByIdAsync(id);
+            var vehicle = await _unitOfWork.VehicleRepository.GetCarByIdWithDetailsAsync(id);
 
             if (vehicle == null)
                 return Result<VehicleDTOs>.Fail("Vehicle not found");
@@ -64,46 +83,102 @@ namespace CarWare.Application.Services
             return Result<VehicleDTOs>.Ok(dto);
         }
 
-        // Add new vehicle
-        public async Task<Result<VehicleDTOs>> AddVehicleAsync(VehicleDTOs dto)
+        // Add vehicle
+        public async Task<Result<VehicleDTOs>> AddVehicleAsync(VehicleCreateDTO dto, string UserId)
         {
-            var repo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = _mapper.Map<Vehicle>(dto);
+            var brand = (await _unitOfWork.Repository<Brand>()
+                .FindAsync(b => b.Id == dto.BrandId)).FirstOrDefault();
 
-            await repo.AddAsync(vehicle);
+            var model = (await _unitOfWork.Repository<Model>()
+                .FindAsync(m => m.Id == dto.ModelId)).FirstOrDefault();
+
+            var user = await _userManager.FindByIdAsync(UserId);
+            if (user == null)
+                return Result<VehicleDTOs>.Fail("User not found");
+
+            if (brand == null || model == null)
+                return Result<VehicleDTOs>.Fail("Invalid Brand, Model.");
+
+            var existingVehicle = (await _unitOfWork.Repository<Vehicle>()
+                        .FindAsync(v => v.BrandId == dto.BrandId
+                       && v.ModelId == dto.ModelId
+                       && v.Year == dto.Year
+                       && v.Color == dto.Color
+                       && v.UserId == UserId))
+                        .FirstOrDefault();
+
+            if (existingVehicle != null)
+                return Result<VehicleDTOs>.Fail("This vehicle already exists for the user.");
+
+            var vehicle = new Vehicle
+            {
+                Name = $"{brand.Name} {model.Name}",
+                BrandId = dto.BrandId,
+                ModelId = dto.ModelId,
+                Year = dto.Year,
+                Color = dto.Color,
+                UserId = UserId
+            };
+
+            await _unitOfWork.Repository<Vehicle>().AddAsync(vehicle);
             await _unitOfWork.CompleteAsync();
 
-            var resultDto = _mapper.Map<VehicleDTOs>(vehicle);
-            return Result<VehicleDTOs>.Ok(resultDto);
+            var mapper = _mapper.Map<VehicleDTOs>(vehicle);
+
+            return Result<VehicleDTOs>.Ok(mapper);
         }
 
         // Update vehicle
-        public async Task<Result<bool>> UpdateVehicleAsync(VehicleDTOs dto)
+        public async Task<Result<bool>> UpdateVehicleAsync(VehicleUpdateDTO dto, string userId)
         {
-            var repo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = await repo.GetByIdAsync(dto.Id);
+            var vehicle = (await _unitOfWork.Repository<Vehicle>()
+                .FindAsync(v => v.Id == dto.Id && v.UserId == userId))
+                .FirstOrDefault();
 
             if (vehicle == null)
-                return Result<bool>.Fail("Vehicle not found");
+                return Result<bool>.Fail("Vehicle not found or access denied.");
+
+            // Check Brand only if changed
+            if (dto.BrandId.HasValue)
+            {
+                var brandExists = await _unitOfWork.Repository<Brand>()
+                    .AnyAsync(b => b.Id == dto.BrandId.Value);
+
+                if (!brandExists)
+                    return Result<bool>.Fail("Brand not found.");
+
+                vehicle.BrandId = dto.BrandId.Value;
+            }
+
+            // Check Model only if changed
+            if (dto.ModelId.HasValue)
+            {
+                var modelExists = await _unitOfWork.Repository<Model>()
+                    .AnyAsync(m => m.Id == dto.ModelId.Value);
+
+                if (!modelExists)
+                    return Result<bool>.Fail("Model not found.");
+
+                vehicle.ModelId = dto.ModelId.Value;
+            }
 
             _mapper.Map(dto, vehicle);
 
-            repo.Update(vehicle);
             await _unitOfWork.CompleteAsync();
-
             return Result<bool>.Ok(true);
         }
 
         // Delete vehicle
-        public async Task<Result<bool>> DeleteVehicleAsync(int id)
+        public async Task<Result<bool>> DeleteVehicleAsync(int id, string userId)
         {
-            var repo = _unitOfWork.Repository<Vehicle>();
-            var vehicle = await repo.GetByIdAsync(id);
+            var vehicle = (await _unitOfWork.Repository<Vehicle>()
+                .FindAsync(v => v.Id == id && v.UserId == userId))
+                .FirstOrDefault();
 
             if (vehicle == null)
-                return Result<bool>.Fail("Vehicle not found");
+                return Result<bool>.Fail("Vehicle not found or access denied.");
 
-            repo.Delete(vehicle);
+            _unitOfWork.Repository<Vehicle>().Delete(vehicle);
             await _unitOfWork.CompleteAsync();
 
             return Result<bool>.Ok(true);

@@ -1,14 +1,10 @@
 ﻿using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using CarWare.API.Errors;
 using CarWare.API.Errors.NonGeneric;
-using CarWare.Application.Common;
 using CarWare.Application.DTOs.Vehicle;
-using CarWare.Application.helper;
 using CarWare.Application.Interfaces;
-using CarWare.Domain.helper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace CarWare.API.Controllers
 {
@@ -19,24 +15,38 @@ namespace CarWare.API.Controllers
         private readonly IVehicleService _vehicleService;
         private readonly IMapper _mapper;
 
+        private string userId => User.FindFirst("uid")?.Value;
+
         public VehicleController(IVehicleService vehicleService, IMapper mapper)
         {
             _vehicleService = vehicleService;
             _mapper = mapper;
         }
 
-        //[HttpGet]
-        //public async Task<ActionResult> GetAll()
-        //{
-        //    var result = await _vehicleService.GetAllVehiclesAsync();
+        [HttpGet("all")]
+        public async Task<ActionResult> GetAll()
+        {
+            var result = await _vehicleService.GetAllVehiclesAsync();
 
-        //    if (!result.Success)
-        //        return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
+            if (!result.Success)
+                return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
 
-        //    return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
-        //        result.Data, "Vehicles retrieved successfully"
-        //    ));
-        //}
+            return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
+                result.Data, "Vehicles retrieved successfully"
+            ));
+        }
+
+        [Authorize]
+        [HttpGet("my-vehicles")]
+        public async Task<ActionResult> GetMyVehiclesAsync()
+        {
+            var userId = User.FindFirst("uid")?.Value;
+
+            var result = await _vehicleService.GetMyVehiclesAsync(userId);
+            return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
+                result.Data, "Vehicles retrieved successfully"
+            ));
+        }
 
         [HttpGet("brands")]
         public async Task<ActionResult> GetAllBrands()
@@ -76,25 +86,25 @@ namespace CarWare.API.Controllers
             ));
         }
 
+        [Authorize]
         [HttpPost]
-        public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> AddVehicle([FromBody] VehicleDTOs dto)
+        public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> AddVehicle([FromBody] VehicleCreateDTO dto)
         {
-            var result = await _vehicleService.AddVehicleAsync(dto);
+            var result = await _vehicleService.AddVehicleAsync(dto, userId);
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
 
-            return Ok(ApiResponseGeneric<VehicleDTOs>.Success(
-                result.Data,
-                "Vehicle created successfully"
-            ));
+            return CreatedAtAction(nameof(GetById), new { id = result.Data.Id },
+                ApiResponseGeneric<VehicleDTOs>.Success(result.Data, "Vehicle created successfully"));
+
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse>> UpdateVehicle(int id, [FromBody] VehicleDTOs dto)
+        public async Task<ActionResult<ApiResponse>> UpdateVehicle(int id, [FromBody] VehicleUpdateDTO dto)
         {
             dto.Id = id;
-            var result = await _vehicleService.UpdateVehicleAsync(dto);
+            var result = await _vehicleService.UpdateVehicleAsync(dto, userId);
 
             if (!result.Success)
                 return NotFound(ApiResponse.Fail(result.Error!, 404));
@@ -105,7 +115,7 @@ namespace CarWare.API.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse>> DeleteVehicle(int id)
         {
-            var result = await _vehicleService.DeleteVehicleAsync(id);
+            var result = await _vehicleService.DeleteVehicleAsync(id, userId);
 
             if (!result.Success)
                 return NotFound(ApiResponse.Fail(result.Error!, 404));

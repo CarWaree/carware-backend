@@ -98,7 +98,7 @@ namespace CarWare.API
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             //vehicleservice
-            builder.Services.AddScoped<IVehicleService, Vehicleservice>();
+            builder.Services.AddScoped<IVehicleService, VehicleService>();
 
             //maintenancetypeservice
             builder.Services.AddScoped<IMaintenanceTypeService, MaintenanceTypeService>();
@@ -110,6 +110,8 @@ namespace CarWare.API
 
             //service center
             builder.Services.AddScoped<IServiceCenterService, ServiceCenterService>();
+            //maintenence reminder 
+            builder.Services.AddScoped<IMaintenanceReminderService, MaintenanceReminderService>();
 
 
             //CORS

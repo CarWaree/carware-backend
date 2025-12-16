@@ -12,6 +12,7 @@ namespace CarWare.Domain
     {
         IGenericRepository<TEntity> Repository<TEntity>() where TEntity : BaseEntity;
         IVehicleRepository VehicleRepository { get; }
+        IMaintenanceRepository MaintenanceRepository { get; }
         Task<int> CompleteAsync();
     }
 }
