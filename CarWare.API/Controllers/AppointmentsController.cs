@@ -54,5 +54,22 @@ namespace CarWare.API.Controllers
                 "Appointment status updated successfully"
             ));
         }
+
+        [HttpGet("my")]
+        [Authorize]
+        public async Task<ActionResult> GetMyAppointments()
+        {
+            var result = await _appointmentService.GetByUserIdAsync(userId);
+
+            if (!result.Success)
+                return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
+
+            return Ok(ApiResponseGeneric<List<AppointmentDto>>.Success(
+                result.Data.ToList(),
+                "User appointments retrieved successfully"
+            ));
+        }
+
+
     }
 }

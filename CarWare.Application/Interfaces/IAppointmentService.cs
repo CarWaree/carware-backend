@@ -13,5 +13,6 @@ namespace CarWare.Application.Interfaces
     {
         Task<Result<AppointmentDto>> CancelAsync(int id, string userId);
         Task<Result<AppointmentDto>> UpdateStatusAsync(int id, AppointmentStatus status);
+        Task<Result<List<AppointmentDto>>> GetByUserIdAsync(string userId);
     }
 }

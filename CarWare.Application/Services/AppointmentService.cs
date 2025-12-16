@@ -69,5 +69,22 @@ namespace CarWare.Application.Services
             var dto = _mapper.Map<AppointmentDto>(appointment);
             return Result<AppointmentDto>.Ok(dto);
         }
+
+
+        public async Task<Result<List<AppointmentDto>>> GetByUserIdAsync(string userId)
+        {
+            var repo = _unitOfWork.Repository<Appointment>();
+
+            // Get all appointments for the logged-in user
+            var appointments = await repo.FindAsync(a => a.UserId == userId);
+
+            // Map to AppointmentDto
+            var dtoList = _mapper.Map<List<AppointmentDto>>(appointments);
+
+            return Result<List<AppointmentDto>>.Ok(dtoList);
+        }
+
+
+
     }
 }
