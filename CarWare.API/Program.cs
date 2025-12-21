@@ -99,20 +99,18 @@ namespace CarWare.API
 
             //vehicleservice
             builder.Services.AddScoped<IVehicleService, VehicleService>();
-
             //maintenancetypeservice
             builder.Services.AddScoped<IMaintenanceTypeService, MaintenanceTypeService>();
-
-
-            //autoMapper
-            builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
-            builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
-
             //service center
             builder.Services.AddScoped<IServiceCenterService, ServiceCenterService>();
             //maintenence reminder 
             builder.Services.AddScoped<IMaintenanceReminderService, MaintenanceReminderService>();
+            //Appointment
+            builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 
+            //autoMapper
+            builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
+            builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
             //CORS
             var MyAllowSpecificOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
