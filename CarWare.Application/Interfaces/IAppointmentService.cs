@@ -1,10 +1,7 @@
 ﻿using CarWare.Application.Common;
 using CarWare.Application.DTOs.Appointment;
 using CarWare.Domain.Enums;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Interfaces
@@ -13,6 +10,7 @@ namespace CarWare.Application.Interfaces
     {
         Task<Result<AppointmentDto>> CancelAsync(int id, string userId);
         Task<Result<AppointmentDto>> UpdateStatusAsync(int id, AppointmentStatus status);
-        Task<Result<List<AppointmentDto>>> GetByUserIdAsync(string userId);
+        Task<Result<List<AppointmentDto>>> GetUserAppointmentsAsync(string userId);
+        Task<Result<AppointmentDto>> AddAppointmentAsync(CreateAppointmentDto dto, string userId);
     }
 }

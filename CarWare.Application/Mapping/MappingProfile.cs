@@ -36,20 +36,14 @@ namespace CarWare.Application.Mapping
             .ForMember(dest => dest.TypeName, opt => opt.MapFrom(src => src.Type.Name))
             .ForMember(dest => dest.VehicleName, opt => opt.MapFrom(src => src.Vehicle.Name));
 
-
-
-
             CreateMap<CreateAppointmentDto, Appointment>();
-
             CreateMap<Appointment, AppointmentDto>()
-                .ForMember(dest => dest.UserName,
+                .ForMember(dest => dest,
                     opt => opt.MapFrom(src => src.user.UserName))
                 .ForMember(dest => dest.VehicleName,
                     opt => opt.MapFrom(src => src.Vehicle.Name))
                 .ForMember(dest => dest.ServiceCenterName,
                     opt => opt.MapFrom(src => src.ServiceCenter.Name));
-
-
         }
     }
 }

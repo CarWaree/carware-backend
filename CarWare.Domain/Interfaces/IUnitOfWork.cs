@@ -1,9 +1,6 @@
 ﻿using CarWare.Domain.Entities;
 using CarWare.Domain.Interfaces;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CarWare.Domain
@@ -13,6 +10,7 @@ namespace CarWare.Domain
         IGenericRepository<TEntity> Repository<TEntity>() where TEntity : BaseEntity;
         IVehicleRepository VehicleRepository { get; }
         IMaintenanceRepository MaintenanceRepository { get; }
+        IAppointmentRepository AppointmentRepository { get; }
         Task<int> CompleteAsync();
     }
 }

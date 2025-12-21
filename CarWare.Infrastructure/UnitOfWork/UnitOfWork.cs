@@ -3,9 +3,7 @@ using CarWare.Domain.Entities;
 using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace CarWare.Infrastructure.UnitOfWork
@@ -18,6 +16,7 @@ namespace CarWare.Infrastructure.UnitOfWork
         // Expose Repositories
         private IVehicleRepository _vehicleRepository;
         private IMaintenanceRepository _maintenanceReminderRepository;
+        private IAppointmentRepository _appointmentRepository;
 
         public UnitOfWork(ApplicationDbContext dbContext)
         {
@@ -30,6 +29,9 @@ namespace CarWare.Infrastructure.UnitOfWork
 
         public IMaintenanceRepository MaintenanceRepository
             => _maintenanceReminderRepository ??= new MaintenanceRepository(_dbContext);
+
+        public IAppointmentRepository AppointmentRepository
+            => _appointmentRepository ??= new AppointmentRepository(_dbContext);
 
 
         public async Task<int> CompleteAsync()

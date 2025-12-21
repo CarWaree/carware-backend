@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using CarWare.API.Errors;
+using CarWare.API.Errors.NonGeneric;
 using CarWare.Application.DTOs.Appointment;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Enums;
@@ -22,9 +23,10 @@ namespace CarWare.API.Controllers
             _appointmentService = appointmentService;
             _mapper = mapper;
         }
-        private string userId => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        // PUT /api/appointments/{id}/cancel
+        //private string userId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+        private string userId => User.FindFirst("uid")?.Value;
+
         [HttpPut("{id}/cancel")]
         public async Task<ActionResult> Cancel(int id)
         {
@@ -39,7 +41,6 @@ namespace CarWare.API.Controllers
             ));
         }
 
-        // PUT /api/appointments/{id}/status
         [HttpPut("{id}/status")]
         [Authorize(Roles = "Admin,ServiceCenter")]
         public async Task<ActionResult> UpdateStatus(int id, [FromBody] AppointmentStatus status)
@@ -59,17 +60,28 @@ namespace CarWare.API.Controllers
         [Authorize]
         public async Task<ActionResult> GetMyAppointments()
         {
-            var result = await _appointmentService.GetByUserIdAsync(userId);
+            var result = await _appointmentService.GetUserAppointmentsAsync(userId);
 
             if (!result.Success)
-                return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
+                return BadRequest(ApiResponseGeneric<string>.Fail(result.Error!));
 
             return Ok(ApiResponseGeneric<List<AppointmentDto>>.Success(
-                result.Data.ToList(),
+                result.Data!.ToList(),
                 "User appointments retrieved successfully"
             ));
         }
 
+        [HttpPost]
+        [Authorize]
+        public async Task<ActionResult> AddAppointment([FromBody]CreateAppointmentDto dto)
+        {
+            var result = await _appointmentService.AddAppointmentAsync(dto, userId);
 
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error!));
+
+            return Created(nameof(AddAppointment), ApiResponseGeneric<AppointmentDto>
+                .Success(result.Data!, "Appointment created successfully"));
+        }
     }
 }
