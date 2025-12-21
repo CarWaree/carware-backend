@@ -13,6 +13,8 @@ namespace CarWare.Application.Interfaces
         Task<Result<bool>> RequestResetAsync(ForgetPasswordDto forgetDTO);
         Task<Result<ResetPasswordResultDto?>> VerifyOtpAsync(VerifyOtpDto optDto);
         Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto resetDto);
+        Task<Result<bool>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto);
+
         IActionResult GoogleLogin(string? returnUrl = null);
         Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null);
     }

@@ -17,11 +17,13 @@ namespace CarWare.API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IConfiguration _config;
 
-        public AuthController(IAuthService authService, SignInManager<ApplicationUser> signInManager)
+        public AuthController(IAuthService authService, SignInManager<ApplicationUser> signInManager, IConfiguration config)
         {
             _authService = authService;
             _signInManager = signInManager;
+            _config = config;
         }
 
         [HttpPost("register")]
@@ -89,22 +91,18 @@ namespace CarWare.API.Controllers
             return await _authService.GoogleCallback(returnUrl, remoteError);
         }
 
-        [HttpGet("verify-email")] //send verfiy email while sign up
-        public async Task<IActionResult> VerifyEmail([FromQuery] string userId, [FromQuery] string token)
+        [HttpPost("verify-email-otp")]
+        public async Task<IActionResult> VerifyEmailOtp([FromBody] VerifyEmailOtpDto dto)
         {
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
-                return BadRequest(ApiResponse.Fail("Invalid verification request."));
+            var result = await _authService.VerifyEmailOtpAsync(dto);
 
-            var user = await _signInManager.UserManager.FindByIdAsync(userId);
-            if (user == null)
-                return BadRequest(ApiResponse.Fail("User not found."));
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error!));
 
-            var result = await _signInManager.UserManager.ConfirmEmailAsync(user, token);
-            if (!result.Succeeded)
-                return BadRequest(ApiResponse.Fail("Email verification failed."));
-
-            return Ok(ApiResponse.Success("Email verified successfully! You can now login."));
+            return Ok(ApiResponse.Success("Email verified successfully"));
         }
 
     }
+
+
 }

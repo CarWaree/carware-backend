@@ -41,20 +41,25 @@ namespace CarWare.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public IQueryable<MaintenanceReminder> GetByVehicleIdQueryable(int vehicleId)
+        public async Task<IEnumerable<MaintenanceReminder>> GetByVehicleWithDetailsAsync(int vehicleId)
         {
-            return _dbContext.maintenances.Where(m => m.VehicleId == vehicleId);
-
+            return await _dbContext.maintenances
+                .Include(m => m.Type)
+                .Include(v => v.Vehicle)
+                .Where(v => v.VehicleId == vehicleId)
+                .ToListAsync();
+                
         }
 
         public IQueryable<MaintenanceReminder> GetUpcomingQueryable(int days = 7)
         {
-            var now = DateTime.UtcNow.Date;
-            var until = now.AddDays(days);
+            var today = DateTime.UtcNow.Date;
+            var until = today.AddDays(days + 1).AddTicks(-1);
 
-            var today = DateTime.UtcNow;
             return _dbContext.maintenances
-                .Where(m => m.NextDueDate > today && m.NextDueDate <= until)
+                .Where(m =>
+                    m.NextDueDate >= today &&
+                    m.NextDueDate <= until)
                 .OrderBy(m => m.NextDueDate);
         }
     }

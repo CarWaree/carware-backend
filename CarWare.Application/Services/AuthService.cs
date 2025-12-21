@@ -4,10 +4,6 @@ using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
@@ -102,60 +98,62 @@ namespace CarWare.Application.Services
 
         public async Task<Result<AuthDto>> RegisterAsync(RegisterDto model)
         {
-            // 1. Check if username or email already exists
-            var existingUser = await _userManager.FindByNameAsync(model.Username);
-            if (existingUser != null)
-                return Result<AuthDto>.Fail("Username is already taken!");
+           
+            // Check duplicate username
+            if (await _userManager.FindByNameAsync(model.Username) != null)
+                return Result<AuthDto>.Fail("Username is already taken");
 
-            var existingEmail = await _userManager.FindByEmailAsync(model.Email);
-            if (existingEmail != null)
-                return Result<AuthDto>.Fail("Email is already registered!");
+           
+            if (await _userManager.FindByEmailAsync(model.Email) != null)
+                return Result<AuthDto>.Fail("Email is already registered");
 
-            // 2. Map DTO to ApplicationUser
             var user = _mapper.Map<ApplicationUser>(model);
 
-            // 3. Create user
+            user.EmailConfirmed = false;
+
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
-            {
-                var errors = string.Join(",", result.Errors.Select(e => e.Description));
-                return Result<AuthDto>.Fail(errors);
-            }
+                return Result<AuthDto>.Fail(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            // 4. Assign default role
             await _userManager.AddToRoleAsync(user, "User");
 
-            var jwtSecurityToken = await CreateJwtToken(user);
-            var rolesList = await _userManager.GetRolesAsync(user);
 
-            //// 5. Generate email confirmation token
-            //var emailToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var otpBytes = new byte[4];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(otpBytes);
+            }
 
-            //// 6. Build verification URL (frontend link)
-            //var frontendUrl = _config["App:FrontendUrl"];
-            //var verificationUrl = $"{frontendUrl}/verify-email?userId={user.Id}&token={Uri.EscapeDataString(emailToken)}";
+            var otp = (BitConverter.ToUInt32(otpBytes, 0) % 900000 + 100000).ToString();
 
-            //// 7. Send verification email
-            //await _emailSender.SendEmailAsync(user.Email,
-            //    "Verify your email",
-            //    $"Hello {user.FirstName},<br/><br/>" +
-            //    $"Please confirm your email by clicking the link below:<br/>" +
-            //    $"<a href='{verificationUrl}'>Verify Email</a><br/><br/>" +
-            //    "Thank you!");
+            // Store OTP in cache (email → otp)
+            await _cache.SetStringAsync(
+                $"email_verify_otp:{user.Email}",
+                otp,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
+                });
 
-            // 8. Return AuthDto (user is NOT authenticated yet)
+            // Send OTP via email
+            await _emailSender.SendEmailAsync(
+                user.Email,
+                "Email Verification Code",
+                $"Your verification code is <b>{otp}</b>. It expires in {OtpValidityMinutes} minutes."
+            );
+
+            // ❌ CHANGED:
+            // No JWT is returned until email is verified
             var authDto = _mapper.Map<AuthDto>(user);
-            authDto.IsAuthenticated = true;
-            authDto.Roles = rolesList.ToList();
-            authDto.Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
-            authDto.ExpiresOn = jwtSecurityToken.ValidTo;
-            //authDto.IsAuthenticated = false; // must verify email first
-            //authDto.Roles = new List<string>(); // no JWT yet
-            //authDto.Token = null;
-            //authDto.ExpiresOn = null;
+            authDto.IsAuthenticated = false;
+            authDto.Token = null;
+            authDto.ExpiresOn = null;
+            authDto.Roles = new List<string>();
 
             return Result<AuthDto>.Ok(authDto);
         }
+        
+
 
         public async Task<Result<AuthDto>> LoginAsync(LoginDto loginDto)
         {
@@ -341,5 +339,33 @@ namespace CarWare.Application.Services
                 token
             });
         }
+
+        public async Task<Result<bool>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto)
+        {
+            // ✅ ADDED:
+            // OTP-based email verification (replaces ConfirmEmailAsync)
+
+            var cachedOtp = await _cache.GetStringAsync($"email_verify_otp:{dto.Email}");
+
+            if (cachedOtp == null || cachedOtp != dto.Otp)
+                return Result<bool>.Fail("Invalid or expired OTP");
+
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+            if (user == null)
+                return Result<bool>.Fail("User not found");
+
+            if (user.EmailConfirmed)
+                return Result<bool>.Fail("Email already verified");
+
+            // Mark email as verified
+            user.EmailConfirmed = true;
+            await _userManager.UpdateAsync(user);
+
+            // Remove OTP after successful verification
+            await _cache.RemoveAsync($"email_verify_otp:{dto.Email}");
+
+            return Result<bool>.Ok(true);
+        }
+
     }
 }

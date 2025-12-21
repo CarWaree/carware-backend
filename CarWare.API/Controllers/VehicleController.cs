@@ -40,7 +40,7 @@ namespace CarWare.API.Controllers
         [HttpGet("my-vehicles")]
         public async Task<ActionResult> GetMyVehiclesAsync()
         {
-            var userId = User.FindFirst("uid")?.Value;
+            //var userId = User.FindFirst("uid")?.Value;
 
             var result = await _vehicleService.GetMyVehiclesAsync(userId);
             return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
@@ -49,28 +49,42 @@ namespace CarWare.API.Controllers
         }
 
         [HttpGet("brands")]
-        public async Task<ActionResult> GetAllBrands()
+        public async Task<ActionResult> GetAllBrands([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var result = await _vehicleService.GetAllBrandsAsync();
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
 
+            // Apply Pagination
+            var pagedData = result.Data
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
             return Ok(ApiResponseGeneric<List<BrandDTO>>
-                .Success(result.Data, "Brands fetched successfully."));
+                .Success(pagedData, "Brands fetched successfully."));
         }
 
+
         [HttpGet("models")]
-        public async Task<ActionResult> GetModelsByBrand(int brandId)
+        public async Task<ActionResult> GetModelsByBrand(int brandId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var result = await _vehicleService.GetModelsByBrandsAsync(brandId);
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
 
+            // Apply Pagination
+            var pagedData = result.Data
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
             return Ok(ApiResponseGeneric<List<ModelDTO>>
-                .Success(result.Data, "Models fetched successfully."));
+                .Success(pagedData, "Models fetched successfully."));
         }
+
 
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponseGeneric<VehicleDTOs>>> GetById(int id)

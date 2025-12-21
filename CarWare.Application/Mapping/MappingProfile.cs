@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using CarWare.Application.DTOs.Appointment;
 using CarWare.Application.DTOs.Maintenance;
 using CarWare.Application.DTOs.maintenanceReminder;
 using CarWare.Application.DTOs.Provider_Center;
@@ -35,7 +36,14 @@ namespace CarWare.Application.Mapping
             .ForMember(dest => dest.TypeName, opt => opt.MapFrom(src => src.Type.Name))
             .ForMember(dest => dest.VehicleName, opt => opt.MapFrom(src => src.Vehicle.Name));
 
-
+            CreateMap<CreateAppointmentDto, Appointment>();
+            CreateMap<Appointment, AppointmentDto>()
+                .ForMember(dest => dest,
+                    opt => opt.MapFrom(src => src.user.UserName))
+                .ForMember(dest => dest.VehicleName,
+                    opt => opt.MapFrom(src => src.Vehicle.Name))
+                .ForMember(dest => dest.ServiceCenterName,
+                    opt => opt.MapFrom(src => src.ServiceCenter.Name));
         }
     }
 }
