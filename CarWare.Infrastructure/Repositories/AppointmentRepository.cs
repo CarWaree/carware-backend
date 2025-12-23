@@ -21,11 +21,21 @@ namespace CarWare.Infrastructure.Repositories
         {
             return await _dbContext.Appointments
                 .Where(u => u.UserId == userId)
-                .Include(v => v.VehicleId)
+                .Include(v => v.Vehicle)
                 .Include(sc => sc.ServiceCenter)
+                .Include(s => s.Service)
                 .OrderBy(d => d.Date)
                 .ThenBy(t => t.TimeSlot)
                 .ToListAsync();
+        }
+
+        public async Task<Appointment?> GetByIdWithDetailsAsync(int id)
+        {
+            return await _dbContext.Appointments
+                .Include(a => a.Vehicle)
+                .Include(a => a.Service)
+                .Include(a => a.ServiceCenter)
+                .FirstOrDefaultAsync(a => a.Id == id);
         }
 
     }
