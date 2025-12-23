@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CarWare.Domain.Enums;
+using System;
 
 namespace CarWare.Application.DTOs.Appointment
 {
@@ -6,8 +7,9 @@ namespace CarWare.Application.DTOs.Appointment
      {
         public int Id { get; set; }
         public DateTime Date { get; set; }
+        public string Status { get; set; } = null!;
         public string VehicleName { get; set; }
-        public string ServiceCenterName{ get; set; }
+        public string ServiceName{ get; set; }
         public string ProviderName { get; set; }
      }
 }

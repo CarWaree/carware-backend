@@ -7,5 +7,6 @@ namespace CarWare.Domain.Interfaces
     public interface IAppointmentRepository
     {
         Task<List<Appointment>> GetUserAppointmentsAsync(string userId);
+        Task<Appointment> GetByIdWithDetailsAsync(int id);
     }
 }

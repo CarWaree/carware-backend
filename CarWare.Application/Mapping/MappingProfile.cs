@@ -38,12 +38,14 @@ namespace CarWare.Application.Mapping
 
             CreateMap<CreateAppointmentDto, Appointment>();
             CreateMap<Appointment, AppointmentDto>()
-                .ForMember(dest => dest,
-                    opt => opt.MapFrom(src => src.user.UserName))
                 .ForMember(dest => dest.VehicleName,
                     opt => opt.MapFrom(src => src.Vehicle.Name))
-                .ForMember(dest => dest.ServiceCenterName,
-                    opt => opt.MapFrom(src => src.ServiceCenter.Name));
+                .ForMember(dest => dest.ProviderName,
+                    opt => opt.MapFrom(src => src.ServiceCenter.Name))
+                .ForMember(dest => dest.ServiceName,
+                    opt => opt.MapFrom(src => src.Service.Name))
+                .ForMember(dest => dest.Status,
+                    opt => opt.MapFrom(src => src.Status.ToString()));
         }
     }
 }

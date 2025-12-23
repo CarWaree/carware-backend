@@ -110,6 +110,11 @@ namespace CarWare.Infrastructure.Context
                 .HasOne(a => a.ServiceCenter)
                 .WithMany(s => s.Appointments)
                 .HasForeignKey(a => a.ServiceCenterId);
+
+            builder.Entity<Appointment>()
+                .HasOne(a => a.Service)
+                .WithMany(s => s.Appointments)
+                .HasForeignKey(a => a.ServiceId);
         }
     }
 }

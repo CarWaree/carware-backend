@@ -108,6 +108,9 @@ namespace CarWare.Application.Services
                     a.TimeSlot == dto.TimeSlot &&
                     a.Status != AppointmentStatus.Cancelled);
 
+            if (slotTaken)
+                return Result<AppointmentDto>.Fail("This time slot is already booked.");
+
             //mapping 
             var appointment =  _mapper.Map<Appointment>(dto);
             appointment.UserId = userId;
@@ -118,7 +121,9 @@ namespace CarWare.Application.Services
 
             //save 
             await _unitOfWork.CompleteAsync();
-            var resultDto = _mapper.Map<AppointmentDto>(appointment);
+
+            var createAppointment = await _unitOfWork.AppointmentRepository.GetByIdWithDetailsAsync(appointment.Id);
+            var resultDto = _mapper.Map<AppointmentDto>(createAppointment);
 
             return Result<AppointmentDto>.Ok(resultDto);
         }

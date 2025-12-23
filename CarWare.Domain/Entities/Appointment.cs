@@ -13,11 +13,13 @@ namespace CarWare.Domain.Entities
         public string UserId { get; set; }
         public int VehicleId { get; set; }
         public int ServiceCenterId { get; set; }
+        public int ServiceId { get; set; }
 
         //Navigation 
         public ApplicationUser user { get; set; }
         public Vehicle Vehicle { get; set; }
         public ServiceCenter ServiceCenter { get; set; }
+        public MaintenanceType Service { get; set; }
 
         //Optional 
         public int? MaintenanceReminderId { get; set; }
