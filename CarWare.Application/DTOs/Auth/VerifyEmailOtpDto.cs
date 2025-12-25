@@ -9,8 +9,7 @@ namespace CarWare.Application.DTOs.Auth
 {
     public class VerifyEmailOtpDto
     {
-        [Required]
-        public string Email { get; set; } = null!;
+      
 
         [Required]
         public string Otp { get; set; } = null!;
