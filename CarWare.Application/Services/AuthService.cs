@@ -162,10 +162,10 @@ namespace CarWare.Application.Services
 
             if (user is null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
                 return Result<AuthDto>.Fail("Invalid Username or Password");
-            
-            ////verfiy before login
-            //if (!user.EmailConfirmed)
-            //    return Result<AuthDto>.Fail("Please verify your email before logging in.");
+
+            if (!user.EmailConfirmed)
+                return Result<AuthDto>.Fail("Please verify your email before logging in.");
+
 
             var jwtSecurityToken = await CreateJwtToken(user);
             var rolesList = await _userManager.GetRolesAsync(user);
@@ -342,30 +342,28 @@ namespace CarWare.Application.Services
 
         public async Task<Result<bool>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto)
         {
-            // ✅ ADDED:
-            // OTP-based email verification (replaces ConfirmEmailAsync)
+         
+            var email = await _cache.GetStringAsync($"email_verify_otp:{dto.Otp}");
 
-            var cachedOtp = await _cache.GetStringAsync($"email_verify_otp:{dto.Email}");
-
-            if (cachedOtp == null || cachedOtp != dto.Otp)
+            if (email == null)
                 return Result<bool>.Fail("Invalid or expired OTP");
 
-            var user = await _userManager.FindByEmailAsync(dto.Email);
+            var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
                 return Result<bool>.Fail("User not found");
 
             if (user.EmailConfirmed)
                 return Result<bool>.Fail("Email already verified");
 
-            // Mark email as verified
             user.EmailConfirmed = true;
             await _userManager.UpdateAsync(user);
 
-            // Remove OTP after successful verification
-            await _cache.RemoveAsync($"email_verify_otp:{dto.Email}");
+            // Remove OTP
+            await _cache.RemoveAsync($"email_verify_otp:{dto.Otp}");
 
             return Result<bool>.Ok(true);
         }
 
     }
+
 }
