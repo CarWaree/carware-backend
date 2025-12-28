@@ -4,6 +4,7 @@ using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
+using CarWare.Domain.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
@@ -68,10 +69,10 @@ namespace CarWare.Application.Services
 
             var claims = new[]
             {
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim("uid", user.Id),
                 new Claim("firstName", user.FirstName),
                 new Claim("lastName", user.LastName)
             }
@@ -97,38 +98,41 @@ namespace CarWare.Application.Services
             return jwtSecurityToken;
         }
 
-        public async Task<Result<AuthDto>> RegisterAsync(RegisterDto model)
+        public async Task<Result<RegisterResponseDto>> RegisterAsync(RegisterDto model)
         {
             if (await _userManager.FindByNameAsync(model.Username) != null)
-                return Result<AuthDto>.Fail("Username is already taken");
+                return Result<RegisterResponseDto>.Fail("Username is already taken");
 
             if (await _userManager.FindByEmailAsync(model.Email) != null)
-                return Result<AuthDto>.Fail("Email is already registered");
+                return Result<RegisterResponseDto>.Fail("Email is already registered");
 
             var user = _mapper.Map<ApplicationUser>(model);
             user.EmailConfirmed = false;
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
-                return Result<AuthDto>.Fail(string.Join(", ", result.Errors.Select(e => e.Description)));
+                return Result<RegisterResponseDto>.Fail(string.Join(", ", result.Errors.Select(e => e.Description)));
 
             await _userManager.AddToRoleAsync(user, "User");
 
             // Generate OTP
-            var otpBytes = new byte[4];
-            using (var rng = RandomNumberGenerator.Create())
-                rng.GetBytes(otpBytes);
+            var otp = OtpGenerator.Generate();
 
-            var otp = (BitConverter.ToUInt32(otpBytes, 0) % 900000 + 100000).ToString();
+            // Cache keys (
+            var otpKey = $"email_verify_otp:{otp}";
+            var attemptsKey = $"email_verify_otp_attempts:{user.Id}";
 
             // Store OTP → Email
             await _cache.SetStringAsync(
-                $"email_verify_otp:{otp}",
-                user.Email,
+                otpKey,
+                user.Id,
                 new DistributedCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
                 });
+
+            // reset attempts if re-register
+            await _cache.RemoveAsync(attemptsKey);
 
             // Send OTP via email
             await _emailSender.SendEmailAsync(
@@ -137,31 +141,28 @@ namespace CarWare.Application.Services
                 $"Your verification code is <b>{otp}</b>. It expires in {OtpValidityMinutes} minutes."
             );
 
-            var authDto = _mapper.Map<AuthDto>(user);
-            authDto.IsAuthenticated = false;
-            authDto.Token = null;
-            authDto.ExpiresOn = null;
-            authDto.Roles = new List<string>();
+            var RegisterResponse = _mapper.Map<RegisterResponseDto>(user);
+            RegisterResponse.IsEmailVerified = false;
 
-            return Result<AuthDto>.Ok(authDto);
+            return Result<RegisterResponseDto>.Ok(RegisterResponse);
         }
 
-        public async Task<Result<AuthDto>> LoginAsync(LoginDto loginDto)
+        public async Task<Result<LoginResponseDto>> LoginAsync(LoginDto loginDto)
         {
             var user = await _userManager.FindByEmailAsync(loginDto.EmailOrUsername)
                 ?? await _userManager.FindByNameAsync(loginDto.EmailOrUsername);
 
             if (user is null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
-                return Result<AuthDto>.Fail("Invalid Username or Password");
+                return Result<LoginResponseDto>.Fail("Invalid Username or Password");
 
             if (!user.EmailConfirmed)
-                return Result<AuthDto>.Fail("Please verify your email before logging in.");
+                return Result<LoginResponseDto>.Fail("Please verify your email before logging in.");
 
 
             var jwtSecurityToken = await CreateJwtToken(user);
             var rolesList = await _userManager.GetRolesAsync(user);
 
-            var authDto = new AuthDto
+            var authDto = new LoginResponseDto
             {
                 IsAuthenticated = true,
                 Username = user.UserName,
@@ -173,7 +174,7 @@ namespace CarWare.Application.Services
                 ExpiresOn = jwtSecurityToken.ValidTo
             };
 
-            return Result<AuthDto>.Ok(authDto);
+            return Result<LoginResponseDto>.Ok(authDto);
         }
 
         public async Task<Result<bool>> RequestResetAsync(ForgetPasswordDto forgetDTO)
@@ -210,27 +211,32 @@ namespace CarWare.Application.Services
 
         public async Task<Result<ResetPasswordResultDto>> VerifyOtpAsync(VerifyOtpDto optDto)
         {
-            var otp = optDto.Otp.Trim();
-            var attemptsKey = $"otp_attempts:{otp}";
+            var userId = await _cache.GetStringAsync($"otp:{optDto.Otp}");
+            if (string.IsNullOrEmpty(userId))
+                return Result<ResetPasswordResultDto>.Fail("Invalid or expired OTP");
+
+            var attemptsKey = $"otp_attempts:{userId}";
             var attemptsStr = await _cache.GetStringAsync(attemptsKey);
-            var attempts = attemptsStr == null ? 0 : int.Parse(attemptsStr);
+            var attempts = string.IsNullOrEmpty(attemptsStr) ? 0 : int.Parse(attemptsStr);
 
             if (attempts >= MaxOtpAttempts)
             {
-                await _cache.RemoveAsync($"otp:{otp}");
+                await _cache.RemoveAsync($"otp:{userId}");
                 await _cache.RemoveAsync(attemptsKey);
                 return Result<ResetPasswordResultDto>.Fail("OTP has been locked due to too many attempts");
             }
 
-            var cachedEmail = await _cache.GetStringAsync($"otp:{optDto.Otp}");
-            if (cachedEmail == null)
-                return Result<ResetPasswordResultDto>.Fail("Invalid or expired OTP");
-
-            var user = await _userManager.FindByEmailAsync(cachedEmail);
+            //Get user by Id
+            var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
+            {
+                await IncrementOtpAttempts.IncrementOtpAttemptsAsync(_cache, attemptsKey, attempts, OtpValidityMinutes);
                 return Result<ResetPasswordResultDto>.Fail("User not found");
+            }
 
+            //cleanup
             await _cache.RemoveAsync($"otp:{optDto.Otp}");
+            await _cache.RemoveAsync(attemptsKey);
 
             // Generate Identity reset token
             var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -243,7 +249,7 @@ namespace CarWare.Application.Services
                 new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) });
 
             // Store also handle -> email if you want quick lookup or extra validation
-            await _cache.SetStringAsync($"reset_handle_email:{handle}", cachedEmail,
+            await _cache.SetStringAsync($"reset_handle_email:{handle}", userId,
                 new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) });
 
             // Return handle to client (short and safe)
@@ -343,39 +349,82 @@ namespace CarWare.Application.Services
             });
         }
 
-        public async Task<Result<bool>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto)
+        public async Task<Result<VerifyEmailResponseDto>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto)
         {
-            var otp = dto.Otp.Trim();
-            var attemptsKey = $"email_verify_otp_attempts:{otp}";
+            var userId = await _cache.GetStringAsync($"email_verify_otp:{dto.Otp}");
+            if (string.IsNullOrEmpty(userId))
+                return Result<VerifyEmailResponseDto>.Fail("Invalid or expired OTP");
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null || user.EmailConfirmed)
+                return Result<VerifyEmailResponseDto>.Fail("Invalid or expired OTP");
+
+            var attemptsKey = $"email_verify_otp_attempts:{user.Id}";
             var attemptsStr = await _cache.GetStringAsync(attemptsKey);
-            var attempts = attemptsStr == null ? 0 : int.Parse(attemptsStr);
+            var attempts = string.IsNullOrEmpty(attemptsStr) ? 0 : int.Parse(attemptsStr);
 
             if (attempts >= MaxOtpAttempts)
             {
-                await _cache.RemoveAsync($"email_verify_otp:{otp}");
+                await _cache.RemoveAsync($"email_verify_otp:{dto.Otp}");
                 await _cache.RemoveAsync(attemptsKey);
-                return Result<bool>.Fail("OTP has been locked due to too many attempts");
+                return Result<VerifyEmailResponseDto>.Fail("OTP has been locked due to too many attempts");
             }
 
-            var email = await _cache.GetStringAsync($"email_verify_otp:{otp}");
+            var email = await _cache.GetStringAsync($"email_verify_otp:{dto.Otp}");
             if (string.IsNullOrEmpty(email))
             {
                 await IncrementOtpAttempts.IncrementOtpAttemptsAsync(_cache, attemptsKey, attempts, OtpValidityMinutes);
-                return Result<bool>.Fail("Invalid or expired OTP");
+                return Result<VerifyEmailResponseDto>.Fail("Invalid or expired OTP");
             }
 
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null || user.EmailConfirmed)
-            {
-                await IncrementOtpAttempts.IncrementOtpAttemptsAsync(_cache, attemptsKey, attempts, OtpValidityMinutes);
-                return Result<bool>.Fail("Invalid or expired OTP");
-            }
-
+            //confirm email
             user.EmailConfirmed = true;
             await _userManager.UpdateAsync(user);
 
-            await _cache.RemoveAsync($"email_verify_otp:{otp}");
+            //cleanup
+            await _cache.RemoveAsync($"email_verify_otp:{dto.Otp}");
             await _cache.RemoveAsync(attemptsKey);
+
+            //generate JWT taken
+            var jwt = await CreateJwtToken(user);
+
+            return Result<VerifyEmailResponseDto>.Ok(new VerifyEmailResponseDto
+            {
+                Token = new JwtSecurityTokenHandler().WriteToken(jwt),
+                ExpiresOn = jwt.ValidTo
+            });
+        }
+
+        public async Task<Result<bool>> ResendEmailOtpAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return Result<bool>.Fail("User not found");
+
+            if (user.EmailConfirmed)
+                return Result<bool>.Fail("Email is already verified");
+
+            // Generate new OTP
+            var otp = OtpGenerator.Generate() ; 
+
+            // Save OTP in cache
+            await _cache.SetStringAsync(
+                $"email_verify_otp:{otp}",
+                user.Id,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
+                });
+
+            // Reset attempts
+            await _cache.RemoveAsync($"email_verify_otp_attempts:{user.Id}");
+
+            // Send email
+            await _emailSender.SendEmailAsync(
+                user.Email,
+                "Resend Verification Code",
+                $"Your verification code is <b>{otp}</b>. It expires in {OtpValidityMinutes} minutes."
+            );
 
             return Result<bool>.Ok(true);
         }

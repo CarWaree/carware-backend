@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace CarWare.Application.DTOs.Auth
 {
-    public class AuthDto
+    public class LoginResponseDto
     {
         public bool IsAuthenticated { get; set; }
         public string FirstName { get; set; }

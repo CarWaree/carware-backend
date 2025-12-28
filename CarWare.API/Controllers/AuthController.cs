@@ -30,7 +30,7 @@ namespace CarWare.API.Controllers
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
-            return Ok(ApiResponseGeneric<AuthDto>.Success(result.Data, "Registration successful"));
+            return Ok(ApiResponseGeneric<RegisterResponseDto>.Success(result.Data, "Registration successful"));
         }
 
         [HttpPost("login")]
@@ -39,7 +39,7 @@ namespace CarWare.API.Controllers
             var result = await _authService.LoginAsync(dto);
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
-            return Ok(ApiResponseGeneric<AuthDto>.Success(result.Data, "Login successful"));
+            return Ok(ApiResponseGeneric<LoginResponseDto>.Success(result.Data, "Login successful"));
         }
 
         [HttpPost("forgot-password")]
@@ -96,10 +96,21 @@ namespace CarWare.API.Controllers
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
 
-            return Ok(ApiResponse.Success("Email verified successfully"));
+            return Ok(ApiResponseGeneric<VerifyEmailResponseDto>.Success(
+                    data: result.Data!,
+                    message: "OTP verified successfully"
+            ));
         }
 
+        [HttpPost("resend-email-otp")]
+        public async Task<IActionResult> ResendEmailOtpAsync([FromBody] string email)
+        {
+            var result = await _authService.ResendEmailOtpAsync(email);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error!));
+
+            return Ok(ApiResponse.Success("A new verification code has been sent to your email."));
+        }
     }
-
-
 }
