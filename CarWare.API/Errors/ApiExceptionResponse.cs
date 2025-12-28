@@ -6,7 +6,7 @@ namespace CarWare.API.Errors
     {
         public string? Description { get; set; }
         public ApiExceptionResponse(int statusCode, string? message = null, string? description = null)
-            :base(statusCode, message)
+            : base(statusCode, message)
         {
             description = Description;
         }

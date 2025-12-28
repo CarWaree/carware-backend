@@ -3,10 +3,10 @@ using CarWare.Application.Common;
 using CarWare.Application.DTOs.Provider_Center;
 using CarWare.Application.Interfaces;
 using CarWare.Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 
 
 namespace CarWare.Application.Services

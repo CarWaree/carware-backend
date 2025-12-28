@@ -28,7 +28,7 @@ namespace CarWare.API.Controllers
             }
 
             return Ok(ApiResponseGeneric<IEnumerable<MaintenanceTypeDto>>
-                .Success(result.Data ,"Maintenance types retrieved successfully"));
+                .Success(result.Data, "Maintenance types retrieved successfully"));
         }
 
     }

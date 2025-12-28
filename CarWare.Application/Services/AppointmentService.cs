@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using CarWare.Application.Common;
 using CarWare.Application.DTOs.Appointment;
-using CarWare.Application.DTOs.Vehicle;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
@@ -90,7 +89,7 @@ namespace CarWare.Application.Services
                 return Result<AppointmentDto>.Fail("Appointment data cannot be in the past");
 
             //vehicle owner
-            var vehicle =  await _unitOfWork.Repository<Vehicle>().GetByIdAsync(dto.VehicleId);
+            var vehicle = await _unitOfWork.Repository<Vehicle>().GetByIdAsync(dto.VehicleId);
 
             if (vehicle == null || vehicle.UserId != userId)
                 return Result<AppointmentDto>.Fail("Invalid Vehicle");
@@ -112,7 +111,7 @@ namespace CarWare.Application.Services
                 return Result<AppointmentDto>.Fail("This time slot is already booked.");
 
             //mapping 
-            var appointment =  _mapper.Map<Appointment>(dto);
+            var appointment = _mapper.Map<Appointment>(dto);
             appointment.UserId = userId;
             appointment.Status = AppointmentStatus.Pending;
 

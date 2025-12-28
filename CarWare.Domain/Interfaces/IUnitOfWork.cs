@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace CarWare.Domain
 {
-    public interface IUnitOfWork:IAsyncDisposable
+    public interface IUnitOfWork : IAsyncDisposable
     {
         IGenericRepository<TEntity> Repository<TEntity>() where TEntity : BaseEntity;
         IVehicleRepository VehicleRepository { get; }

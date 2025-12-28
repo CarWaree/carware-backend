@@ -1,5 +1,4 @@
 ﻿using CarWare.API.Errors;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Net;
 using System.Text.Json;
 
@@ -30,7 +29,7 @@ namespace CarWare.API.Middlewares
 
                 //action with response 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex.Message); // in Development Env
                 // Log Exception in (Database | Files) in Production Env

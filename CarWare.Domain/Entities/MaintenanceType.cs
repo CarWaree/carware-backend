@@ -10,10 +10,10 @@ namespace CarWare.Domain.Entities
     {
         [Required]
         public string Name { get; set; }
-        public ICollection<MaintenanceReminder> Reminders { get; set; } 
+        public ICollection<MaintenanceReminder> Reminders { get; set; }
             = new List<MaintenanceReminder>();
 
-        public ICollection<ProviderServices> ProviderServices { get; set; } 
+        public ICollection<ProviderServices> ProviderServices { get; set; }
             = new List<ProviderServices>();
 
         public ICollection<Appointment> Appointments { get; set; }

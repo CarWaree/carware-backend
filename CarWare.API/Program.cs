@@ -9,11 +9,8 @@ using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
 using CarWare.Infrastructure.Seed;
-using CarWare.Infrastructure.Services;
 using CarWare.Infrastructure.UnitOfWork;
-using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -85,7 +82,7 @@ namespace CarWare.API
             {
                 googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
                 googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-                googleOptions.CallbackPath = "/auth/google-callback"; 
+                googleOptions.CallbackPath = "/auth/google-callback";
             });
 
             //Memory Cashe
@@ -154,7 +151,7 @@ namespace CarWare.API
             {
                 var logger = services.GetRequiredService<ILogger<Program>>();
                 logger.LogError(ex, " Error during migration or seeding");
-            }           
+            }
 
             //Create roles when the app starts
             await CreateRolesAsync(app);

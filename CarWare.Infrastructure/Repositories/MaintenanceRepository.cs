@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CarWare.Infrastructure.Repositories
@@ -14,7 +13,7 @@ namespace CarWare.Infrastructure.Repositories
     {
         private readonly ApplicationDbContext _dbContext;
 
-        public MaintenanceRepository(ApplicationDbContext dbContext):base(dbContext) 
+        public MaintenanceRepository(ApplicationDbContext dbContext) : base(dbContext)
         {
             _dbContext = dbContext;
         }
@@ -48,7 +47,7 @@ namespace CarWare.Infrastructure.Repositories
                 .Include(v => v.Vehicle)
                 .Where(v => v.VehicleId == vehicleId)
                 .ToListAsync();
-                
+
         }
 
         public IQueryable<MaintenanceReminder> GetUpcomingQueryable(int days = 7)

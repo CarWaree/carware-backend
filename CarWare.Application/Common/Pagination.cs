@@ -1,20 +1,20 @@
 ﻿namespace CarWare.Application.Common;
-    using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 
-public  class Pagination<T>
+public class Pagination<T>
+{
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
+    public int TotalCount { get; set; }
+    public IReadOnlyList<T> Items { get; set; }
+    public int TotalPages
     {
-        public int PageNumber { get; set; }
-        public int PageSize { get; set; }
-        public int TotalCount { get; set; }
-        public IReadOnlyList<T> Items { get; set; }
-        public int TotalPages
+        get
         {
-            get
-            {
-                if (PageSize == 0) return 0;
-                return (int)Math.Ceiling((double)TotalCount / PageSize);
-            }
+            if (PageSize == 0) return 0;
+            return (int)Math.Ceiling((double)TotalCount / PageSize);
         }
     }
+}
 

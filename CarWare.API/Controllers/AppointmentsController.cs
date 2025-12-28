@@ -5,9 +5,7 @@ using CarWare.Application.DTOs.Appointment;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace CarWare.API.Controllers
 {
@@ -73,7 +71,7 @@ namespace CarWare.API.Controllers
 
         [HttpPost]
         [Authorize]
-        public async Task<ActionResult> AddAppointment([FromBody]CreateAppointmentDto dto)
+        public async Task<ActionResult> AddAppointment([FromBody] CreateAppointmentDto dto)
         {
             var result = await _appointmentService.AddAppointmentAsync(dto, userId);
 
