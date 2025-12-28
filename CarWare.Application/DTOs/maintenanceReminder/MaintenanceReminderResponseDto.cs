@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CarWare.Application.DTOs.maintenanceReminder
 {
@@ -13,6 +9,6 @@ namespace CarWare.Application.DTOs.maintenanceReminder
         public DateTime NextDueDate { get; set; }
         public string TypeName { get; set; }
         public string VehicleName { get; set; }
-    
-}
+
+    }
 }

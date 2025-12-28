@@ -1,6 +1,5 @@
 ﻿using CarWare.API.Errors.NonGeneric;
 using CarWare.Application.Interfaces;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CarWare.API.Controllers
@@ -16,7 +15,7 @@ namespace CarWare.API.Controllers
             _serviceCenterService = serviceCenterService;
         }
 
-     
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -27,7 +26,7 @@ namespace CarWare.API.Controllers
             return Ok(result.Data);
         }
 
-        
+
         [HttpGet("by-service-type")]
         public async Task<IActionResult> GetByServiceType([FromQuery] int serviceTypeId)
         {

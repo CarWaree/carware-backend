@@ -4,8 +4,8 @@ namespace CarWare.Application.DTOs.Auth
 {
     public class RegisterDto
     {
-        public string FirstName { get; set; }          
-        public string LastName { get; set; }          
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
 
         [Required(ErrorMessage = "Username is required")]
         public string Username { get; set; }
@@ -13,7 +13,7 @@ namespace CarWare.Application.DTOs.Auth
         [Required(ErrorMessage = "Email is required")]
         [RegularExpression(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Invalid email format")]
         [DataType(DataType.EmailAddress)]
-        public string Email { get; set; }       
+        public string Email { get; set; }
 
         [Required(ErrorMessage = "Password is required")]
         [StringLength(128, MinimumLength = 8)]

@@ -28,7 +28,7 @@ namespace CarWare.Infrastructure.Seed
 
             var year = DateTime.UtcNow.Year;
 
-             //1) Seed Brands  
+            //1) Seed Brands  
             foreach (var brandEntry in carData)
             {
                 var brandName = brandEntry.Key?.Trim();
@@ -41,7 +41,7 @@ namespace CarWare.Infrastructure.Seed
             }
             await context.SaveChangesAsync();
 
-             //2) Seed Models  
+            //2) Seed Models  
             var allBrands = await context.brands.ToListAsync();
             foreach (var brandEntry in carData)
             {
@@ -65,5 +65,5 @@ namespace CarWare.Infrastructure.Seed
             }
             await context.SaveChangesAsync();
         }
-    }  
+    }
 }

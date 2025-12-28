@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CarWare.Infrastructure.Repositories
 {
-    public class AppointmentRepository : GenericRepository<Appointment>, IAppointmentRepository  
+    public class AppointmentRepository : GenericRepository<Appointment>, IAppointmentRepository
     {
         private readonly ApplicationDbContext _dbContext;
 

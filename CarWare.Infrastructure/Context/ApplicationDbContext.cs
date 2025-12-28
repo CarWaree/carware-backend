@@ -1,7 +1,6 @@
 ﻿using CarWare.Domain.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Emit;
 
 namespace CarWare.Infrastructure.Context
 {
@@ -27,9 +26,9 @@ namespace CarWare.Infrastructure.Context
             builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
             builder.Entity<Vehicle>()
-            .HasOne(c => c.user)           
-            .WithMany(c => c.vehicles)                     
-            .HasForeignKey(c => c.UserId)  
+            .HasOne(c => c.user)
+            .WithMany(c => c.vehicles)
+            .HasForeignKey(c => c.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Model>()

@@ -11,7 +11,7 @@ namespace CarWare.Domain.helper
             string attemptsKey,
             int currentAttempts,
             int otpValidityMinutes)
-            {
+        {
             await cache.SetStringAsync(
                 attemptsKey,
                 (currentAttempts + 1).ToString(),

@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace CarWare.Application.DTOs.Vehicle
+﻿namespace CarWare.Application.DTOs.Vehicle
 {
     public class VehicleDTOs
     {

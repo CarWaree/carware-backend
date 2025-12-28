@@ -6,7 +6,7 @@ namespace CarWare.Application.DTOs.Auth
     {
         [Required]
         public string Token { get; set; }
-        
+
         [Required]
         [DataType(DataType.Password)]
         [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$",

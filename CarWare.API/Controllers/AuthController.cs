@@ -3,11 +3,8 @@ using CarWare.API.Errors.NonGeneric;
 using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace CarWare.API.Controllers
 {
@@ -46,18 +43,18 @@ namespace CarWare.API.Controllers
         }
 
         [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPasswordAsync([FromBody]ForgetPasswordDto dto)
+        public async Task<IActionResult> ForgotPasswordAsync([FromBody] ForgetPasswordDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Email))
                 return BadRequest(ApiResponse.Fail("Email is required."));
 
-            var result =  await _authService.RequestResetAsync(dto);
+            var result = await _authService.RequestResetAsync(dto);
 
             return Ok(ApiResponse.Success("Check your email for the verification code"));
         }
 
         [HttpPost("Verify-Otp")]
-        public async Task<IActionResult> VerifyOtpAsync([FromBody]VerifyOtpDto dto)
+        public async Task<IActionResult> VerifyOtpAsync([FromBody] VerifyOtpDto dto)
         {
             var result = await _authService.VerifyOtpAsync(dto);
             if (result == null)

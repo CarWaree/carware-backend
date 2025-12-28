@@ -4,7 +4,6 @@ using CarWare.Application.DTOs.maintenanceReminder;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
-using CarWare.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
