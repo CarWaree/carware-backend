@@ -5,6 +5,7 @@ using CarWare.Application.DTOs.Vehicle;
 using CarWare.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace CarWare.API.Controllers
 {
@@ -14,8 +15,7 @@ namespace CarWare.API.Controllers
     {
         private readonly IVehicleService _vehicleService;
         private readonly IMapper _mapper;
-
-        private string userId => User.FindFirst("uid")?.Value;
+        private string? userId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         public VehicleController(IVehicleService vehicleService, IMapper mapper)
         {
@@ -40,8 +40,6 @@ namespace CarWare.API.Controllers
         [HttpGet("my-vehicles")]
         public async Task<ActionResult> GetMyVehiclesAsync()
         {
-            //var userId = User.FindFirst("uid")?.Value;
-
             var result = await _vehicleService.GetMyVehiclesAsync(userId);
             return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
                 result.Data, "Vehicles retrieved successfully"

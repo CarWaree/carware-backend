@@ -6,6 +6,7 @@ using CarWare.Application.Interfaces;
 using CarWare.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace CarWare.API.Controllers
 {
@@ -21,9 +22,7 @@ namespace CarWare.API.Controllers
             _appointmentService = appointmentService;
             _mapper = mapper;
         }
-
-        //private string userId => User.FindFirstValue(ClaimTypes.NameIdentifier);
-        private string userId => User.FindFirst("uid")?.Value;
+        private string userId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         [HttpPut("{id}/cancel")]
         public async Task<ActionResult> Cancel(int id)
