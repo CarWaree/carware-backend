@@ -8,12 +8,11 @@ namespace CarWare.Domain.Entities
     {
         [Required, StringLength(100)]
         public string FirstName { get; set; }
-
         [Required, StringLength(100)]
         public string LastName { get; set; }
 
         public ICollection<Vehicle> vehicles { get; set; }
-
         public ICollection<Appointment> Appointments { get; set; }
+        public List<RefreshToken> RefreshTokens { get; set; }
     }
 }

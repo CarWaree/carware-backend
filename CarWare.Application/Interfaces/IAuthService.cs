@@ -14,7 +14,9 @@ namespace CarWare.Application.Interfaces
         Task<Result<bool>> ResendEmailOtpAsync(string email);
         Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto resetDto);
         Task<Result<VerifyEmailResponseDto>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto);
-        IActionResult GoogleLogin(string? returnUrl = null);
-        Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null);
+        //IActionResult GoogleLogin(string? returnUrl = null);
+        //Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null);
+        Task<Result<LoginResponseDto>> RefreshTokenAsync(string token);
+        Task<Result<bool>> RevokeRefreshTokenAsync(string refreshToken);
     }
 }
