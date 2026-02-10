@@ -3,6 +3,7 @@ using CarWare.API.Errors.NonGeneric;
 using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -39,6 +40,10 @@ namespace CarWare.API.Controllers
             var result = await _authService.LoginAsync(dto);
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
+
+            if (!string.IsNullOrEmpty(result.Data.RefreshToken))
+                SetRefreshTokenInCookie(result.Data.RefreshToken, result.Data.RefreshTokenExpiration);
+
             return Ok(ApiResponseGeneric<LoginResponseDto>.Success(result.Data, "Login successful"));
         }
 
@@ -76,17 +81,17 @@ namespace CarWare.API.Controllers
             return Ok(ApiResponse.Success("Password reset successfully"));
         }
 
-        [HttpGet("google-login")]
-        public IActionResult GoogleLogin(string? returnUrl = null)
-        {
-            return _authService.GoogleLogin(returnUrl);
-        }
+        //[HttpGet("google-login")]
+        //public IActionResult GoogleLogin(string? returnUrl = null)
+        //{
+        //    return _authService.GoogleLogin(returnUrl);
+        //}
 
-        [HttpGet("google-callback")]
-        public async Task<IActionResult> GoogleCallback([FromQuery] string? returnUrl = null, [FromQuery] string? remoteError = null)
-        {
-            return await _authService.GoogleCallback(returnUrl, remoteError);
-        }
+        //[HttpGet("google-callback")]
+        //public async Task<IActionResult> GoogleCallback([FromQuery] string? returnUrl = null, [FromQuery] string? remoteError = null)
+        //{
+        //    return await _authService.GoogleCallback(returnUrl, remoteError);
+        //}
 
         [HttpPost("verify-email-otp")]
         public async Task<IActionResult> VerifyEmailOtp([FromBody] VerifyEmailOtpDto dto)
@@ -111,6 +116,67 @@ namespace CarWare.API.Controllers
                 return BadRequest(ApiResponse.Fail(result.Error!));
 
             return Ok(ApiResponse.Success("A new verification code has been sent to your email."));
+        }
+
+        private void SetRefreshTokenInCookie(string refreshToken, DateTime expires)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = expires.ToLocalTime()
+            };
+
+            Response.Cookies.Append("RefreshToken", refreshToken, cookieOptions);
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken()
+        {
+            var refreshToken = Request.Cookies["refreshToken"];
+
+            if (string.IsNullOrEmpty(refreshToken))
+                return Unauthorized(ApiResponse.Fail("Refresh token is missing"));
+
+            var result = await _authService.RefreshTokenAsync(refreshToken);
+
+            if (!result.Success)
+                return Unauthorized(ApiResponse.Fail(result.Error));
+
+            // Update cookie with new refresh token
+            Response.Cookies.Append("refreshToken",
+                result.Data.RefreshToken,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = result.Data.RefreshTokenExpiration
+                });
+
+            return Ok(ApiResponseGeneric<LoginResponseDto>.Success(
+                result.Data,
+                "Token refreshed successfully"
+            ));
+        }
+
+        [Authorize]
+        [HttpPost("revoke-token")]
+        public async Task<IActionResult> RevokeToken()
+        {
+            var refreshToken = Request.Cookies["refreshToken"];
+
+            if (string.IsNullOrEmpty(refreshToken))
+                return BadRequest(ApiResponse.Fail("Refresh token is missing"));
+
+            var result = await _authService.RevokeRefreshTokenAsync(refreshToken);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error));
+
+            // Delete cookie
+            Response.Cookies.Delete("refreshToken");
+
+            return Ok(ApiResponse.Success("Logged out successfully"));
         }
     }
 }

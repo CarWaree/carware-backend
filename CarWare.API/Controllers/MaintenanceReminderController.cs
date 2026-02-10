@@ -5,6 +5,7 @@ using CarWare.Application.DTOs.maintenanceReminder;
 using CarWare.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace CarWare.API.Controllers
 {
@@ -20,7 +21,8 @@ namespace CarWare.API.Controllers
             _reminderService = reminderService;
             _mapper = mapper;
         }
-        private string userId => User.FindFirst("uid")?.Value;
+
+        private string userId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         [Authorize]
         [HttpGet("my")]

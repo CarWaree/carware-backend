@@ -17,9 +17,10 @@ using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 
 namespace CarWare.Application.Services
 {
@@ -65,14 +66,15 @@ namespace CarWare.Application.Services
 
             var roleClaims = new List<Claim>();
             foreach (var role in roles)
-                roleClaims.Add(new Claim("roles", role));
+                roleClaims.Add(new Claim(ClaimTypes.Role, role));
 
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Name, user.UserName),
                 new Claim("firstName", user.FirstName),
                 new Claim("lastName", user.LastName)
             }
@@ -90,7 +92,7 @@ namespace CarWare.Application.Services
                 issuer: _jwt.Issuer,
                 audience: _jwt.Audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddDays(_jwt.DurationInDays),
+                expires: DateTime.UtcNow.AddMinutes(_jwt.AccessTokenDurationMinutes),
                 signingCredentials: signingCredentials);
             #endregion
 
@@ -158,7 +160,6 @@ namespace CarWare.Application.Services
             if (!user.EmailConfirmed)
                 return Result<LoginResponseDto>.Fail("Please verify your email before logging in.");
 
-
             var jwtSecurityToken = await CreateJwtToken(user);
             var rolesList = await _userManager.GetRolesAsync(user);
 
@@ -171,8 +172,23 @@ namespace CarWare.Application.Services
                 LastName = user.LastName,
                 Roles = rolesList.ToList(),
                 Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken),
-                ExpiresOn = jwtSecurityToken.ValidTo
             };
+
+            if(user.RefreshTokens.Any(t => t.IsActive))
+            {
+                var activeRefreshToken = user.RefreshTokens.FirstOrDefault(t => t.IsActive);
+                authDto.RefreshToken = activeRefreshToken.Token;
+                authDto.RefreshTokenExpiration = activeRefreshToken.ExpiresOn;
+            }
+            else
+            {
+                var refreshToken = GenerateRefreshToken();
+                authDto.RefreshToken = refreshToken.Token;
+                authDto.RefreshTokenExpiration = refreshToken.ExpiresOn;
+
+                user.RefreshTokens.Add(refreshToken);
+                await _userManager.UpdateAsync(user);
+            }
 
             return Result<LoginResponseDto>.Ok(authDto);
         }
@@ -292,62 +308,62 @@ namespace CarWare.Application.Services
             return Result<bool>.Ok(true);
         }
 
-        public IActionResult GoogleLogin(string? returnUrl = null)
-        {
-            var baseUrl = _config["ExternalAuth:Google:CallbackBaseUrl"];
-            var callbackPath = _config["ExternalAuth:Google:CallbackPath"];
+        //public IActionResult GoogleLogin(string? returnUrl = null)
+        //{
+        //    var baseUrl = _config["ExternalAuth:Google:CallbackBaseUrl"];
+        //    var callbackPath = _config["ExternalAuth:Google:CallbackPath"];
 
-            var redirectUrl = $"{baseUrl}{callbackPath}?returnUrl={returnUrl}";
-            var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+        //    var redirectUrl = $"{baseUrl}{callbackPath}?returnUrl={returnUrl}";
+        //    var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
 
-            return new ChallengeResult("Google", props);
-        }
+        //    return new ChallengeResult("Google", props);
+        //}
 
-        public async Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null)
-        {
-            if (remoteError != null)
-                return new BadRequestObjectResult(new { error = remoteError });
+        //public async Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null)
+        //{
+        //    if (remoteError != null)
+        //        return new BadRequestObjectResult(new { error = remoteError });
 
-            var info = await _signInManager.GetExternalLoginInfoAsync();
-            if (info == null)
-                return new BadRequestObjectResult(new { error = "Error loading external login info" });
+        //    var info = await _signInManager.GetExternalLoginInfoAsync();
+        //    if (info == null)
+        //        return new BadRequestObjectResult(new { error = "Error loading external login info" });
 
-            var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, false);
+        //    var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, false);
 
-            ApplicationUser user;
+        //    ApplicationUser user;
 
-            if (!signInResult.Succeeded)
-            {
-                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+        //    if (!signInResult.Succeeded)
+        //    {
+        //        var email = info.Principal.FindFirstValue(ClaimTypes.Email);
 
-                user = await _userManager.FindByEmailAsync(email);
-                if (user == null)
-                {
-                    user = new ApplicationUser
-                    {
-                        Email = email,
-                        UserName = email,
-                    };
+        //        user = await _userManager.FindByEmailAsync(email);
+        //        if (user == null)
+        //        {
+        //            user = new ApplicationUser
+        //            {
+        //                Email = email,
+        //                UserName = email,
+        //            };
 
-                    await _userManager.CreateAsync(user);
-                }
+        //            await _userManager.CreateAsync(user);
+        //        }
 
-                await _userManager.AddLoginAsync(user, info);
-            }
-            else
-            {
-                user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-            }
+        //        await _userManager.AddLoginAsync(user, info);
+        //    }
+        //    else
+        //    {
+        //        user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+        //    }
 
-            var jwtToken = await CreateJwtToken(user);
-            var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+        //    var jwtToken = await CreateJwtToken(user);
+        //    var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
 
-            return new OkObjectResult(new
-            {
-                message = "Google Login Successful",
-                token
-            });
-        }
+        //    return new OkObjectResult(new
+        //    {
+        //        message = "Google Login Successful",
+        //        token
+        //    });
+        //}
 
         public async Task<Result<VerifyEmailResponseDto>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto)
         {
@@ -390,8 +406,7 @@ namespace CarWare.Application.Services
 
             return Result<VerifyEmailResponseDto>.Ok(new VerifyEmailResponseDto
             {
-                Token = new JwtSecurityTokenHandler().WriteToken(jwt),
-                ExpiresOn = jwt.ValidTo
+                Token = new JwtSecurityTokenHandler().WriteToken(jwt)
             });
         }
 
@@ -425,6 +440,81 @@ namespace CarWare.Application.Services
                 "Resend Verification Code",
                 $"Your verification code is <b>{otp}</b>. It expires in {OtpValidityMinutes} minutes."
             );
+
+            return Result<bool>.Ok(true);
+        }
+
+        public async Task<Result<LoginResponseDto>> RefreshTokenAsync(string refreshToken)
+        {
+            var user = await _userManager.Users
+                .Include(u => u.RefreshTokens)
+                .SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
+
+            if (user == null)
+                return Result<LoginResponseDto>.Fail("Invalid refresh token");
+
+            var token = user.RefreshTokens.Single(t => t.Token == refreshToken);
+
+            if (!token.IsActive)
+                return Result<LoginResponseDto>.Fail("Refresh token is expired");
+
+            // Generate new JWT
+            var jwtToken = await CreateJwtToken(user);
+
+            // Rotate refresh token
+            token.RevokedOn = DateTime.UtcNow;
+
+            var newRefreshToken = GenerateRefreshToken();
+            user.RefreshTokens.Add(newRefreshToken);
+            await _userManager.UpdateAsync(user);
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var response = new LoginResponseDto
+            {
+                IsAuthenticated = true,
+                Username = user.UserName,
+                Email = user.Email,
+                Roles = roles.ToList(),
+                Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                RefreshToken = newRefreshToken.Token,
+                RefreshTokenExpiration = newRefreshToken.ExpiresOn
+            };
+
+            return Result<LoginResponseDto>.Ok(response);
+        }
+
+        private RefreshToken GenerateRefreshToken()
+        {
+            var randomNumber = new byte[32];
+
+            RandomNumberGenerator.Fill(randomNumber);
+
+            return new RefreshToken
+            {
+                Token = Convert.ToBase64String(randomNumber),
+                ExpiresOn = DateTime.UtcNow.AddDays(_jwt.RefreshTokenDurationDays),
+                CreatedOn = DateTime.UtcNow
+            };
+        }
+
+        public async Task<Result<bool>> RevokeRefreshTokenAsync(string refreshToken)
+        {
+            var user = await _userManager.Users
+                .Include(u => u.RefreshTokens)
+                .SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
+
+            if (user == null)
+                return Result<bool>.Fail("Invalid refresh token");
+
+            var token = user.RefreshTokens.Single(t => t.Token == refreshToken);
+
+            if (!token.IsActive)
+                return Result<bool>.Fail("Refresh token already revoked");
+
+            token.RevokedOn = DateTime.UtcNow;
+
+            await _userManager.UpdateAsync(user);
 
             return Result<bool>.Ok(true);
         }
