@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
 {
-    internal class ProfileService : IProfileService
+    public class ProfileService : IProfileService
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMapper _mapper;
@@ -27,7 +27,7 @@ namespace CarWare.Application.Services
         IMapper mapper,
         IUnitOfWork unitOfWork,
         IAuthService authService,
-       IWebHostEnvironment env)
+        IWebHostEnvironment env)
         {
             _userManager = userManager;
             _mapper = mapper;
@@ -48,7 +48,7 @@ namespace CarWare.Application.Services
                 FullName = $"{user.FirstName} {user.LastName}",
                 PhoneNumber = user.PhoneNumber,
                 Email = user.Email,
-                ProfileImageUrl = user.ProfileImageUrl
+                ProfileImageUrl = user.ProfileImageUrl ?? "/profile-images/default.png"
             };
 
             return Result<EditProfileResponseDto>.Ok(dto);

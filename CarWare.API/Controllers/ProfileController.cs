@@ -23,11 +23,12 @@ namespace CarWare.API.Controllers
             _profileService = profileService;
         }
 
-        // GET api/profile/{userId}
+        // GET api/profile
         [HttpGet]
         public async Task<IActionResult> GetProfile()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier); 
+
             var result = await _profileService.GetProfileAsync(userId);
 
             if (!result.Success)
@@ -37,10 +38,12 @@ namespace CarWare.API.Controllers
                 .Success(result.Data, "Profile retrieved successfully"));
         }
 
-        // PUT api/profile/{userId}
-        [HttpPut("{userId}")]
-        public async Task<IActionResult> UpdateProfile(string userId, [FromBody] UpdateProfileDto dto)
+        // PUT api/profile
+        [HttpPut]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             var result = await _profileService.UpdateProfileAsync(userId, dto);
 
             if (!result.Success)
@@ -49,11 +52,13 @@ namespace CarWare.API.Controllers
             return Ok(ApiResponse.Success(result.Data));
         }
 
-        // POST api/profile/upload-image/{userId}
-        [HttpPost("upload-image/{userId}")]
+        // POST api/profile/upload-image
+        [HttpPost("upload-image")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadImage(string userId, [FromForm] UploadImageDto dto)
+        public async Task<IActionResult> UploadImage([FromForm] UploadImageDto dto)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             var result = await _profileService.UploadImageAsync(userId, dto.File);
 
             if (!result.Success)
