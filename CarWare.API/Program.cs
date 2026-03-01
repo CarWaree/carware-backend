@@ -104,7 +104,7 @@ namespace CarWare.API
             builder.Services.AddScoped<IMaintenanceReminderService, MaintenanceReminderService>();
             //Appointment
             builder.Services.AddScoped<IAppointmentService, AppointmentService>();
-
+            builder.Services.AddScoped<IHistoryService, HistoryService>();
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
@@ -188,7 +188,9 @@ namespace CarWare.API
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))
+                {
                     await roleManager.CreateAsync(new IdentityRole(role));
+                }
             }
         }
     }
