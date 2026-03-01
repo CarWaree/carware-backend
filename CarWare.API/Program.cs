@@ -106,6 +106,8 @@ namespace CarWare.API
             builder.Services.AddScoped<IAppointmentService, AppointmentService>();
             //Profile
             builder.Services.AddScoped<IProfileService, ProfileService>();
+            //History
+            builder.Services.AddScoped<IHistoryService, HistoryService>();
 
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
@@ -191,7 +193,9 @@ namespace CarWare.API
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))
+                {
                     await roleManager.CreateAsync(new IdentityRole(role));
+                }
             }
         }
     }
