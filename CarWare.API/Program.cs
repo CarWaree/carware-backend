@@ -104,6 +104,10 @@ namespace CarWare.API
             builder.Services.AddScoped<IMaintenanceReminderService, MaintenanceReminderService>();
             //Appointment
             builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+            //Profile
+            builder.Services.AddScoped<IProfileService, ProfileService>();
+            //History
+            builder.Services.AddScoped<IHistoryService, HistoryService>();
 
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
@@ -128,7 +132,6 @@ namespace CarWare.API
             var app = builder.Build();
 
             //update Database 
-
             using var scope = app.Services.CreateScope();
             var services = scope.ServiceProvider;
 
@@ -167,6 +170,8 @@ namespace CarWare.API
             }
             app.UseHttpsRedirection();
 
+            app.UseStaticFiles();
+
             app.UseCors("MyAllowSpecificOrigins");
 
             app.UseAuthentication();
@@ -188,7 +193,9 @@ namespace CarWare.API
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))
+                {
                     await roleManager.CreateAsync(new IdentityRole(role));
+                }
             }
         }
     }

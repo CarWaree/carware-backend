@@ -19,6 +19,8 @@ namespace CarWare.Infrastructure.Context
         public DbSet<ServiceCenter> ServiceCenters { get; set; }
         public DbSet<ProviderServices> ProviderServices { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
+        public DbSet<ServiceRequest> ServiceRequest { get; set; }
+        public DbSet<ServiceRequestService> ServiceRequestService { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -60,6 +62,7 @@ namespace CarWare.Infrastructure.Context
                 .WithMany(t => t.Reminders)
                 .HasForeignKey(m => m.TypeId)
                 .OnDelete(DeleteBehavior.Restrict);
+
 
             builder.Entity<MaintenanceType>().HasData(
 
@@ -114,6 +117,22 @@ namespace CarWare.Infrastructure.Context
                 .HasOne(a => a.Service)
                 .WithMany(s => s.Appointments)
                 .HasForeignKey(a => a.ServiceId);
+
+            builder.Entity<ServiceRequestService>()
+    .HasKey(x => new { x.ServiceRequestId, x.MaintenanceTypeId });
+
+            builder.Entity<ServiceRequestService>()
+                .HasOne(x => x.ServiceRequest)
+                .WithMany(sr => sr.ServiceRequestServices)
+                .HasForeignKey(x => x.ServiceRequestId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ServiceRequestService>()
+                .HasOne(x => x.MaintenanceType)
+                .WithMany()
+                .HasForeignKey(x => x.MaintenanceTypeId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }

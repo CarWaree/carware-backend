@@ -4,6 +4,7 @@ using CarWare.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CarWare.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225225033_AddProfileFields")]
+    partial class AddProfileFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -341,65 +344,6 @@ namespace CarWare.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("CarWare.Domain.Entities.ServiceRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PaymentMethod")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PaymentStatus")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ServiceCenterId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("TotalPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("VehicleId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ServiceCenterId");
-
-                    b.HasIndex("VehicleId");
-
-                    b.ToTable("ServiceRequest");
-                });
-
-            modelBuilder.Entity("CarWare.Domain.Entities.ServiceRequestService", b =>
-                {
-                    b.Property<int>("ServiceRequestId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MaintenanceTypeId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("ServiceRequestId", "MaintenanceTypeId");
-
-                    b.HasIndex("MaintenanceTypeId");
-
-                    b.ToTable("ServiceRequestService");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -706,44 +650,6 @@ namespace CarWare.Infrastructure.Migrations
                     b.Navigation("ServiceCenter");
                 });
 
-            modelBuilder.Entity("CarWare.Domain.Entities.ServiceRequest", b =>
-                {
-                    b.HasOne("CarWare.Domain.Entities.ServiceCenter", "ServiceCenter")
-                        .WithMany()
-                        .HasForeignKey("ServiceCenterId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Vehicle", "Vehicle")
-                        .WithMany()
-                        .HasForeignKey("VehicleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ServiceCenter");
-
-                    b.Navigation("Vehicle");
-                });
-
-            modelBuilder.Entity("CarWare.Domain.Entities.ServiceRequestService", b =>
-                {
-                    b.HasOne("CarWare.Domain.Entities.MaintenanceType", "MaintenanceType")
-                        .WithMany()
-                        .HasForeignKey("MaintenanceTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("CarWare.Domain.Entities.ServiceRequest", "ServiceRequest")
-                        .WithMany("ServiceRequestServices")
-                        .HasForeignKey("ServiceRequestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("MaintenanceType");
-
-                    b.Navigation("ServiceRequest");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -860,11 +766,6 @@ namespace CarWare.Infrastructure.Migrations
                     b.Navigation("Appointments");
 
                     b.Navigation("ProviderServices");
-                });
-
-            modelBuilder.Entity("CarWare.Domain.Entities.ServiceRequest", b =>
-                {
-                    b.Navigation("ServiceRequestServices");
                 });
 
             modelBuilder.Entity("Model", b =>
