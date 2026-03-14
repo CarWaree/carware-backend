@@ -8,10 +8,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
@@ -60,7 +58,6 @@ namespace CarWare.Application.Services
             if (user == null)
                 return Result<string>.Fail("User not found");
 
-           
             if (!string.IsNullOrWhiteSpace(dto.FullName))
             {
                 var names = dto.FullName.Split(' ', 2);
@@ -68,27 +65,36 @@ namespace CarWare.Application.Services
                 user.LastName = names.Length > 1 ? names[1] : "";
             }
 
-          
             if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
                 user.PhoneNumber = dto.PhoneNumber;
 
-            if (!string.IsNullOrWhiteSpace(dto.PendingEmail) && dto.PendingEmail != user.Email)
-            {
-                user.PendingEmail = dto.PendingEmail;
+            //  Email Change 
+            var newEmail = dto.PendingEmail?.Trim().ToLower();
+            var currentEmail = user.Email?.Trim().ToLower();
 
-                var otpResult = await _authService.ResendEmailOtpAsync(dto.PendingEmail);
+            bool emailChanged = false;
+
+            if (!string.IsNullOrWhiteSpace(newEmail) && newEmail != currentEmail)
+            {
+                user.PendingEmail = newEmail;
+
+                var otpResult = await _authService.ResendEmailOtpAsync(newEmail);
                 if (!otpResult.Success)
                     return Result<string>.Fail("Failed to send verification email");
+
+                emailChanged = true;
             }
 
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
                 return Result<string>.Fail(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            return Result<string>.Ok("Profile updated successfully. " +
-                (!string.IsNullOrWhiteSpace(dto.PendingEmail) ? "Please verify your new email." : ""));
+            return Result<string>.Ok(
+                emailChanged
+                    ? "Profile updated successfully. Please verify your new email."
+                    : "Profile updated successfully."
+            );
         }
-        
 
         public async Task<Result<string>> UploadImageAsync(string userId, IFormFile file)
         {

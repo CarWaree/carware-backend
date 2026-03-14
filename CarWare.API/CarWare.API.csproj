@@ -33,4 +33,8 @@
     <ProjectReference Include="..\CarWare.Infrastructure\CarWare.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
 </Project>

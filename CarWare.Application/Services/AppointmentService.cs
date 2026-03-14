@@ -26,6 +26,44 @@ namespace CarWare.Application.Services
             _mapper = mapper;
         }
 
+        private async Task CreateServiceRequestFromAppointment(Appointment appointment)
+        {
+            bool exists = await _unitOfWork.Repository<ServiceRequest>()
+                .AnyAsync(x => x.AppointmentId == appointment.Id);
+
+            if (exists)
+                return;
+
+            var serviceRequest = new ServiceRequest
+            {
+                UserId = appointment.UserId,
+                VehicleId = appointment.VehicleId,
+                AppointmentId = appointment.Id,
+                ServiceCenterId = appointment.ServiceCenterId,
+                ServiceDate = appointment.Date,
+                Status = AppointmentStatus.Completed,
+                PaymentMethod = PaymentMethod.Cash,
+                PaymentStatus = PaymentStatus.Pending,
+                CreatedAt = DateTime.UtcNow,
+                TotalPrice = 0
+            };
+
+            await _unitOfWork.Repository<ServiceRequest>()
+                .AddAsync(serviceRequest);
+
+            await _unitOfWork.CompleteAsync();
+
+            var serviceRequestService = new ServiceRequestService
+            {
+                ServiceRequestId = serviceRequest.Id,
+                MaintenanceTypeId = appointment.ServiceId, 
+                Description = appointment.Service?.Name
+            };
+
+            await _unitOfWork.Repository<ServiceRequestService>()
+                .AddAsync(serviceRequestService);
+        }
+
         public async Task<Result<AppointmentDto>> CancelAsync(int id, string userId)
         {
             var repo = _unitOfWork.Repository<Appointment>();
@@ -41,6 +79,8 @@ namespace CarWare.Application.Services
 
             appointment.Status = AppointmentStatus.Cancelled;
             repo.Update(appointment);
+
+            await CreateServiceRequestFromAppointment(appointment);
 
             await _unitOfWork.CompleteAsync();
 
@@ -63,6 +103,11 @@ namespace CarWare.Application.Services
 
             appointment.Status = status;
             repo.Update(appointment);
+
+            if (status == AppointmentStatus.Completed || status == AppointmentStatus.Cancelled)
+            {
+                await CreateServiceRequestFromAppointment(appointment);
+            }
 
             await _unitOfWork.CompleteAsync();
 

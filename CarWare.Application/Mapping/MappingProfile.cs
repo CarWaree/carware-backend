@@ -1,11 +1,13 @@
 ﻿using AutoMapper;
 using CarWare.Application.DTOs.Appointment;
+using CarWare.Application.DTOs.History;
 using CarWare.Application.DTOs.Maintenance;
 using CarWare.Application.DTOs.maintenanceReminder;
 using CarWare.Application.DTOs.Profile;
 using CarWare.Application.DTOs.Provider_Center;
 using CarWare.Application.DTOs.Vehicle;
 using CarWare.Domain.Entities;
+using System.Linq;
 
 namespace CarWare.Application.Mapping
 {
@@ -47,11 +49,31 @@ namespace CarWare.Application.Mapping
                     opt => opt.MapFrom(src => src.Service.Name))
                 .ForMember(dest => dest.Status,
                     opt => opt.MapFrom(src => src.Status.ToString()));
+
             CreateMap<ApplicationUser, EditProfileResponseDto>()
             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
             .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.ProfileImageUrl, opt => opt.MapFrom(src => src.ProfileImageUrl));
+
+            //History Profile
+            CreateMap<ServiceRequest, HistoryDetailsDto>()
+                .ForMember(dest => dest.CarName,
+                    opt => opt.MapFrom(src => src.Vehicle.Brand + " " + src.Vehicle.Model))
+                .ForMember(dest => dest.ServiceName,
+                    opt => opt.MapFrom(src => src.ServiceRequestServices
+                        .Select(s => s.MaintenanceType.Name)
+                        .FirstOrDefault()))
+                .ForMember(dest => dest.ProviderName,
+                    opt => opt.MapFrom(src => src.ServiceCenter.Name))
+                .ForMember(dest => dest.Date,
+                    opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.PaymentMethod,
+                    opt => opt.MapFrom(src => src.PaymentMethod.ToString()))
+                .ForMember(dest => dest.ServiceDetails,
+                    opt => opt.MapFrom(src => src.ServiceRequestServices
+                        .Select(s => s.Description)
+                        .FirstOrDefault()));
         }
     }
-    }
+}

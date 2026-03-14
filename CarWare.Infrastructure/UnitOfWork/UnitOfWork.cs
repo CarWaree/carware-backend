@@ -17,6 +17,7 @@ namespace CarWare.Infrastructure.UnitOfWork
         private IVehicleRepository _vehicleRepository;
         private IMaintenanceRepository _maintenanceReminderRepository;
         private IAppointmentRepository _appointmentRepository;
+        private IServiceHistoryRepository _serviceHistoryRepository;
 
         public UnitOfWork(ApplicationDbContext dbContext)
         {
@@ -32,6 +33,9 @@ namespace CarWare.Infrastructure.UnitOfWork
 
         public IAppointmentRepository AppointmentRepository
             => _appointmentRepository ??= new AppointmentRepository(_dbContext);
+
+        public IServiceHistoryRepository ServiceHistoryRepository
+            => _serviceHistoryRepository ??= new ServiceHistoryRepository(_dbContext);
 
 
         public async Task<int> CompleteAsync()

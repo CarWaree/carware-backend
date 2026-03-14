@@ -11,6 +11,7 @@ namespace CarWare.Domain
         IVehicleRepository VehicleRepository { get; }
         IMaintenanceRepository MaintenanceRepository { get; }
         IAppointmentRepository AppointmentRepository { get; }
+        IServiceHistoryRepository ServiceHistoryRepository { get; }
         Task<int> CompleteAsync();
     }
 }

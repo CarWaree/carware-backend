@@ -4,6 +4,7 @@ using CarWare.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CarWare.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260306122023_addServiceHistoryTable")]
+    partial class addServiceHistoryTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -349,9 +352,6 @@ namespace CarWare.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AppointmentId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -363,9 +363,6 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.Property<int>("ServiceCenterId")
                         .HasColumnType("int");
-
-                    b.Property<DateTime>("ServiceDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -381,9 +378,6 @@ namespace CarWare.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AppointmentId")
-                        .IsUnique();
 
                     b.HasIndex("ServiceCenterId");
 
@@ -404,9 +398,6 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
 
                     b.HasKey("ServiceRequestId", "MaintenanceTypeId");
 
@@ -723,12 +714,6 @@ namespace CarWare.Infrastructure.Migrations
 
             modelBuilder.Entity("CarWare.Domain.Entities.ServiceRequest", b =>
                 {
-                    b.HasOne("CarWare.Domain.Entities.Appointment", "Appointment")
-                        .WithOne()
-                        .HasForeignKey("CarWare.Domain.Entities.ServiceRequest", "AppointmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("CarWare.Domain.Entities.ServiceCenter", "ServiceCenter")
                         .WithMany()
                         .HasForeignKey("ServiceCenterId")
@@ -744,8 +729,6 @@ namespace CarWare.Infrastructure.Migrations
                         .HasForeignKey("VehicleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Appointment");
 
                     b.Navigation("ServiceCenter");
 
