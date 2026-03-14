@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace CarWare.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class FixServiceRequest : Migration
+    public partial class addServiceHistoryTable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,18 +17,23 @@ namespace CarWare.Infrastructure.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     VehicleId = table.Column<int>(type: "int", nullable: false),
                     ServiceCenterId = table.Column<int>(type: "int", nullable: false),
-                    TotalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PaymentMethod = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PaymentStatus = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TotalPrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    PaymentMethod = table.Column<int>(type: "int", nullable: false),
+                    PaymentStatus = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ServiceRequest", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ServiceRequest_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ServiceRequest_ServiceCenters_ServiceCenterId",
                         column: x => x.ServiceCenterId,
@@ -72,6 +77,11 @@ namespace CarWare.Infrastructure.Migrations
                 name: "IX_ServiceRequest_ServiceCenterId",
                 table: "ServiceRequest",
                 column: "ServiceCenterId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ServiceRequest_UserId",
+                table: "ServiceRequest",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ServiceRequest_VehicleId",

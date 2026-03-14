@@ -20,14 +20,13 @@ namespace CarWare.API.Controllers
 
         [HttpGet]
         public async Task<IActionResult> GetAll(
-            string? status,
             int pageNumber = 1,
             int pageSize = 10)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             var result = await _historyService
-                .GetAllAsync(userId, status, pageNumber, pageSize);
+                .GetAllAsync(userId);
 
             if (!result.Success)
                 return BadRequest(result.Error);
@@ -35,11 +34,13 @@ namespace CarWare.API.Controllers
             return Ok(result.Data);
         }
 
-        
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var result = await _historyService.GetByIdAsync(id);
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var result = await _historyService.GetByIdAsync(id, userId);
 
             if (!result.Success)
                 return NotFound(result.Error);

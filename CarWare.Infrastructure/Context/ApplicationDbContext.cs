@@ -119,20 +119,25 @@ namespace CarWare.Infrastructure.Context
                 .HasForeignKey(a => a.ServiceId);
 
             builder.Entity<ServiceRequestService>()
-    .HasKey(x => new { x.ServiceRequestId, x.MaintenanceTypeId });
+                .HasKey(x => new { x.ServiceRequestId, x.MaintenanceTypeId });
 
             builder.Entity<ServiceRequestService>()
                 .HasOne(x => x.ServiceRequest)
                 .WithMany(sr => sr.ServiceRequestServices)
                 .HasForeignKey(x => x.ServiceRequestId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<ServiceRequestService>()
                 .HasOne(x => x.MaintenanceType)
                 .WithMany()
                 .HasForeignKey(x => x.MaintenanceTypeId)
-                 .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<ServiceRequest>()
+                .HasOne(sr => sr.Appointment)
+                .WithOne()
+                .HasForeignKey<ServiceRequest>(sr => sr.AppointmentId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

@@ -1,30 +1,29 @@
-﻿using System;
+﻿using CarWare.Domain.Enums;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CarWare.Domain.Entities
 {
-    public class ServiceRequest
+    public class ServiceRequest : BaseEntity
     {
-        public int Id { get; set; }
-
+        //FK
         public string UserId { get; set; }
-
         public int VehicleId { get; set; }
-        public Vehicle Vehicle { get; set; }
         public int ServiceCenterId { get; set; }
-        public ServiceCenter ServiceCenter { get; set; }
+        public int AppointmentId { get; set; }
 
         public decimal TotalPrice { get; set; }
-        public string Status { get; set; }
-
-        public string PaymentMethod { get; set; }
-        public string PaymentStatus { get; set; }
-
+        public DateTime ServiceDate { get; set; }
+        public AppointmentStatus Status { get; set; }
+        public PaymentMethod PaymentMethod { get; set; }
+        public PaymentStatus PaymentStatus { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        //Navegations 
+        public ApplicationUser User { get; set; }
+        public Appointment Appointment { get; set; }
+        public Vehicle Vehicle { get; set; }
+        public ServiceCenter ServiceCenter { get; set; }
         public ICollection<ServiceRequestService> ServiceRequestServices { get; set; }
     }
 }
