@@ -9,7 +9,7 @@ namespace CarWare.Application.Interfaces
     public interface IAppointmentService
     {
         Task<Result<AppointmentDto>> CancelAsync(int id, string userId);
-        Task<Result<AppointmentDto>> UpdateStatusAsync(int id, AppointmentStatus status);
+        Task<Result<AppointmentDto>> UpdateStatusAsync(int id, UpdateStatusDto statusDto);
         Task<Result<List<AppointmentDto>>> GetUserAppointmentsAsync(string userId);
         Task<Result<AppointmentDto>> AddAppointmentAsync(CreateAppointmentDto dto, string userId);
     }

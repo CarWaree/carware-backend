@@ -39,8 +39,8 @@ namespace CarWare.API.Controllers
         }
 
         [HttpPut("{id}/status")]
-        [Authorize(Roles = "Admin,ServiceCenter")]
-        public async Task<ActionResult> UpdateStatus(int id, [FromBody] AppointmentStatus status)
+        //[Authorize(Roles = "Admin,ServiceCenter")]
+        public async Task<ActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto status)
         {
             var result = await _appointmentService.UpdateStatusAsync(id, status);
 
