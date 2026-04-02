@@ -81,17 +81,35 @@ namespace CarWare.API.Controllers
             return Ok(ApiResponse.Success("Password reset successfully"));
         }
 
-        //[HttpGet("google-login")]
-        //public IActionResult GoogleLogin(string? returnUrl = null)
-        //{
-        //    return _authService.GoogleLogin(returnUrl);
-        //}
+        [HttpGet("google-login")]
+        public IActionResult GoogleLogin(string? returnUrl = null)
+        {
+            var (redirectUrl, props) = _authService.GetGoogleRedirectUrl(returnUrl);
 
-        //[HttpGet("google-callback")]
-        //public async Task<IActionResult> GoogleCallback([FromQuery] string? returnUrl = null, [FromQuery] string? remoteError = null)
-        //{
-        //    return await _authService.GoogleCallback(returnUrl, remoteError);
-        //}
+            return new ChallengeResult("Google", props);
+        }
+
+        [HttpPost("google-mobile")]
+        public async Task<IActionResult> GoogleMobileLogin([FromBody] GoogleLoginDto model)
+        {
+            var result = await _authService.GoogleLoginAsync(model.IdToken);
+
+            return Ok(result);
+        }
+
+        [HttpGet("google-callback")]
+        public async Task<IActionResult> GoogleCallback(string? remoteError = null)
+        {
+            try
+            {
+                var result = await _authService.HandleGoogleCallbackAsync(remoteError);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
 
         [HttpPost("verify-email-otp")]
         public async Task<IActionResult> VerifyEmailOtp([FromBody] VerifyEmailOtpDto dto)

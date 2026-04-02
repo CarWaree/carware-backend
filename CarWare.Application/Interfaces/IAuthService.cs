@@ -1,5 +1,6 @@
 ﻿using CarWare.Application.Common;
 using CarWare.Application.DTOs.Auth;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 
@@ -14,8 +15,9 @@ namespace CarWare.Application.Interfaces
         Task<Result<bool>> ResendEmailOtpAsync(string email);
         Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto resetDto);
         Task<Result<VerifyEmailResponseDto>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto);
-        //IActionResult GoogleLogin(string? returnUrl = null);
-        //Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null);
+        (string RedirectUrl, AuthenticationProperties Props) GetGoogleRedirectUrl(string? returnUrl = null);
+        Task<AuthResponseDto> HandleGoogleCallbackAsync(string? returnUrl = null, string? remoteError = null);
+        Task<AuthResponseDto> GoogleLoginAsync(string idToken);
         Task<Result<LoginResponseDto>> RefreshTokenAsync(string token);
         Task<Result<bool>> RevokeRefreshTokenAsync(string refreshToken);
     }

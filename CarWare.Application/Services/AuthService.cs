@@ -5,8 +5,11 @@ using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using CarWare.Domain.helper;
 using CarWare.Domain.Helpers;
+using Google.Apis.Auth;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -17,10 +20,9 @@ using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
-using Microsoft.EntityFrameworkCore;
 
 namespace CarWare.Application.Services
 {
@@ -308,62 +310,94 @@ namespace CarWare.Application.Services
             return Result<bool>.Ok(true);
         }
 
-        //public IActionResult GoogleLogin(string? returnUrl = null)
-        //{
-        //    var baseUrl = _config["ExternalAuth:Google:CallbackBaseUrl"];
-        //    var callbackPath = _config["ExternalAuth:Google:CallbackPath"];
+        public (string RedirectUrl, AuthenticationProperties Props) GetGoogleRedirectUrl(string? returnUrl = null)
+        {
+            var baseUrl = _config["ExternalAuth:Google:CallbackBaseUrl"];
+            var callbackPath = _config["ExternalAuth:Google:CallbackPath"];
 
-        //    var redirectUrl = $"{baseUrl}{callbackPath}?returnUrl={returnUrl}";
-        //    var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+            var redirectUrl = $"{baseUrl}{callbackPath}?returnUrl={returnUrl}";
+            var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
 
-        //    return new ChallengeResult("Google", props);
-        //}
+            return (redirectUrl, props);
+        }
 
-        //public async Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null)
-        //{
-        //    if (remoteError != null)
-        //        return new BadRequestObjectResult(new { error = remoteError });
+        public async Task<AuthResponseDto> HandleGoogleCallbackAsync(string? returnUrl = null, string? remoteError = null)
+        {
+            if (remoteError != null)
+                throw new Exception(remoteError);
 
-        //    var info = await _signInManager.GetExternalLoginInfoAsync();
-        //    if (info == null)
-        //        return new BadRequestObjectResult(new { error = "Error loading external login info" });
+            var info = await _signInManager.GetExternalLoginInfoAsync();
+            if (info == null)
+                throw new Exception("Error loading external login info");
 
-        //    var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, false);
+            var signInResult = await _signInManager
+                .ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, false);
 
-        //    ApplicationUser user;
+            ApplicationUser user;
 
-        //    if (!signInResult.Succeeded)
-        //    {
-        //        var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+            if (!signInResult.Succeeded)
+            {
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
 
-        //        user = await _userManager.FindByEmailAsync(email);
-        //        if (user == null)
-        //        {
-        //            user = new ApplicationUser
-        //            {
-        //                Email = email,
-        //                UserName = email,
-        //            };
+                user = await _userManager.FindByEmailAsync(email);
 
-        //            await _userManager.CreateAsync(user);
-        //        }
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        Email = email,
+                        UserName = email
+                    };
 
-        //        await _userManager.AddLoginAsync(user, info);
-        //    }
-        //    else
-        //    {
-        //        user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-        //    }
+                    await _userManager.CreateAsync(user);
+                }
 
-        //    var jwtToken = await CreateJwtToken(user);
-        //    var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+                await _userManager.AddLoginAsync(user, info);
+            }
+            else
+            {
+                user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+            }
 
-        //    return new OkObjectResult(new
-        //    {
-        //        message = "Google Login Successful",
-        //        token
-        //    });
-        //}
+            var jwtToken = await CreateJwtToken(user);
+            var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+
+            return new AuthResponseDto
+            {
+                Message = "Google Login Successful",
+                Token = token
+            };
+        }
+
+        public async Task<AuthResponseDto> GoogleLoginAsync(string idToken)
+        {
+            var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
+
+            var email = payload.Email;
+            var name = payload.Name;
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    Email = email,
+                    UserName = email
+                };
+
+                await _userManager.CreateAsync(user);
+            }
+
+            var jwtToken = await CreateJwtToken(user);
+            var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+
+            return new AuthResponseDto
+            {
+                Message = "Google Login Success",
+                Token = token
+            };
+        }
 
         public async Task<Result<VerifyEmailResponseDto>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto)
         {
