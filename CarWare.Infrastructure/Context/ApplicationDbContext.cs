@@ -21,6 +21,8 @@ namespace CarWare.Infrastructure.Context
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<ServiceRequest> ServiceRequest { get; set; }
         public DbSet<ServiceRequestService> ServiceRequestService { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<DeviceToken> DeviceTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -138,6 +140,18 @@ namespace CarWare.Infrastructure.Context
                 .WithOne()
                 .HasForeignKey<ServiceRequest>(sr => sr.AppointmentId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Notification>()
+                .HasOne(dt => dt.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<DeviceToken>()
+                .HasOne(dt => dt.User)
+                .WithMany(u => u.DeviceTokens)
+                .HasForeignKey(dt => dt.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
