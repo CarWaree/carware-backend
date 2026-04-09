@@ -11,12 +11,10 @@ using System.Threading.Tasks;
 public class HistoryService : IHistoryService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
 
-    public HistoryService(IUnitOfWork unitOfWork, IMapper mapper)
+    public HistoryService(IUnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
     }
 
     public async Task<Result<List<HistoryCardDto>>> GetAllAsync(string userId)
@@ -29,6 +27,7 @@ public class HistoryService : IHistoryService
                 CarName = x.Vehicle.Brand.Name + " " + x.Vehicle.Model.Name,
                 ProviderName = x.ServiceCenter.Name,
                 Date = x.CreatedAt,
+                PaymentMethod = x.PaymentMethod.ToString(),
                 ServiceName = x.ServiceRequestServices
                     .Select(s => s.MaintenanceType.Name)
                     .FirstOrDefault()

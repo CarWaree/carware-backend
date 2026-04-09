@@ -8,8 +8,8 @@ namespace CarWare.Domain.Enums
 {
     public enum PaymentStatus
     {
-        Pending,
-        Paid,
-        Failed
+        Pending = 1,
+        Paid = 2,
+        Failed = 3
     }
 }

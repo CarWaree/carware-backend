@@ -1,6 +1,7 @@
 ﻿using CarWare.Domain.Entities;
 using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
 namespace CarWare.Infrastructure.Repositories
@@ -16,7 +17,12 @@ namespace CarWare.Infrastructure.Repositories
 
         public IQueryable<ServiceRequest> GetUserHistory(string userId)
         {
-            return _context.ServiceRequest.Where(x => x.UserId == userId);
+            return _context.ServiceRequest
+                .Where(x => x.UserId == userId)
+                .Include(x => x.Vehicle)
+                .Include(x => x.ServiceCenter)
+                .Include(x => x.ServiceRequestServices)
+                    .ThenInclude(s => s.MaintenanceType);
         }
     }
 }

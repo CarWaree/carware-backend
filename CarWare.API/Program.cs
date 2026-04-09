@@ -10,6 +10,7 @@ using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
 using CarWare.Infrastructure.Seed;
 using CarWare.Infrastructure.UnitOfWork;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -84,6 +85,12 @@ namespace CarWare.API
                 googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
                 googleOptions.CallbackPath = "/auth/google-callback";
             });
+
+            //Hangfire 
+            builder.Services.AddHangfire(config =>
+                config.UseSqlServerStorage(
+                    builder.Configuration.GetConnectionString("DefaultConnection")));
+            builder.Services.AddHangfireServer();
 
             //Memory Cashe
             builder.Services.AddDistributedMemoryCache();
@@ -176,6 +183,8 @@ namespace CarWare.API
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.UseHangfireDashboard("/hangfire");
 
             app.MapControllers();
 

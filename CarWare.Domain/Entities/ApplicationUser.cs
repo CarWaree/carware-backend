@@ -14,9 +14,13 @@ namespace CarWare.Domain.Entities
 
         public string ProfileImageUrl { get; set; }
 
+        //Navigation Property
         public ICollection<Vehicle> vehicles { get; set; }
         public ICollection<Appointment> Appointments { get; set; }
         public List<RefreshToken> RefreshTokens { get; set; }
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public ICollection<DeviceToken> DeviceTokens { get; set; } = new List<DeviceToken>();
+
         public string PendingEmail { get; set; }
     }
 }

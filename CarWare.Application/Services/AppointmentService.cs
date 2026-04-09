@@ -6,8 +6,10 @@ using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
@@ -41,7 +43,7 @@ namespace CarWare.Application.Services
                 AppointmentId = appointment.Id,
                 ServiceCenterId = appointment.ServiceCenterId,
                 ServiceDate = appointment.Date,
-                Status = AppointmentStatus.Completed,
+                ServiceStatus = ServiceRequestStatus.Pending,
                 PaymentMethod = PaymentMethod.Cash,
                 PaymentStatus = PaymentStatus.Pending,
                 CreatedAt = DateTime.UtcNow,
@@ -62,6 +64,18 @@ namespace CarWare.Application.Services
 
             await _unitOfWork.Repository<ServiceRequestService>()
                 .AddAsync(serviceRequestService);
+            await _unitOfWork.CompleteAsync();
+        }
+
+        private static bool IsValidTransition(AppointmentStatus current, AppointmentStatus next)
+        {
+            if (current == AppointmentStatus.Pending)
+                return next == AppointmentStatus.Confirmed || next == AppointmentStatus.Cancelled;
+
+            if (current == AppointmentStatus.Confirmed)
+                return next == AppointmentStatus.Completed || next == AppointmentStatus.Cancelled;
+
+            return false;
         }
 
         public async Task<Result<AppointmentDto>> CancelAsync(int id, string userId)
@@ -79,16 +93,14 @@ namespace CarWare.Application.Services
 
             appointment.Status = AppointmentStatus.Cancelled;
             repo.Update(appointment);
-
-            await CreateServiceRequestFromAppointment(appointment);
-
             await _unitOfWork.CompleteAsync();
 
-            var dto = _mapper.Map<AppointmentDto>(appointment);
+            var updated = await _unitOfWork.AppointmentRepository.GetByIdWithDetailsAsync(id);
+            var dto = _mapper.Map<AppointmentDto>(updated);
             return Result<AppointmentDto>.Ok(dto);
         }
 
-        public async Task<Result<AppointmentDto>> UpdateStatusAsync(int id, AppointmentStatus status)
+        public async Task<Result<AppointmentDto>> UpdateStatusAsync(int id, UpdateStatusDto statusDto)
         {
             var repo = _unitOfWork.Repository<Appointment>();
             var appointment = await repo.GetByIdAsync(id);
@@ -97,21 +109,32 @@ namespace CarWare.Application.Services
                 return Result<AppointmentDto>
                     .Fail($"Appointment with id {id} not found.");
 
-            if (appointment.Status == AppointmentStatus.Cancelled)
-                return Result<AppointmentDto>
-                    .Fail("Cancelled appointment cannot be updated.");
+            if (appointment.Status == AppointmentStatus.Completed)
+                return Result<AppointmentDto>.Fail("Cannot update a completed appointment.");
 
-            appointment.Status = status;
+            if (appointment.Status == AppointmentStatus.Cancelled)
+                return Result<AppointmentDto>.Fail("Cannot update a cancelled appointment.");
+
+            if (!IsValidTransition(appointment.Status, statusDto.Status))
+                return Result<AppointmentDto>.Fail(
+                    $"Cannot move from {appointment.Status} to {statusDto.Status}.");
+
+            appointment.Status = statusDto.Status;
             repo.Update(appointment);
 
-            if (status == AppointmentStatus.Completed || status == AppointmentStatus.Cancelled)
+            if (statusDto.Status == AppointmentStatus.Completed)
             {
-                await CreateServiceRequestFromAppointment(appointment);
+                var withDetails = await _unitOfWork.AppointmentRepository.GetByIdWithDetailsAsync(id);
+                withDetails.Status = AppointmentStatus.Completed;
+                await CreateServiceRequestFromAppointment(withDetails);
+            }
+            else
+            {
+                await _unitOfWork.CompleteAsync();
             }
 
-            await _unitOfWork.CompleteAsync();
-
-            var dto = _mapper.Map<AppointmentDto>(appointment);
+            var updated = await _unitOfWork.AppointmentRepository.GetByIdWithDetailsAsync(id);
+            var dto = _mapper.Map<AppointmentDto>(updated);
             return Result<AppointmentDto>.Ok(dto);
         }
 
