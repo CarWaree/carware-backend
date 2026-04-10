@@ -101,6 +101,8 @@ namespace CarWare.API
             //Unit of Work
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+            //Role
+            builder.Services.AddScoped<IRoleService, RoleService>();
             //vehicleservice
             builder.Services.AddScoped<IVehicleService, VehicleService>();
             //maintenancetypeservice

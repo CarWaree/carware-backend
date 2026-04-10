@@ -8,7 +8,7 @@ namespace CarWare.API.Errors
         public ApiExceptionResponse(int statusCode, string? message = null, string? description = null)
             : base(statusCode, message)
         {
-            description = Description;
+            Description = description;
         }
     }
 }
