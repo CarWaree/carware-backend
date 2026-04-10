@@ -1,7 +1,32 @@
+# Build outputs
 bin/
 obj/
+
+# Visual Studio
 .vs/
 *.user
 *.suo
+*.rsuser
+
+# Database
 *.db
+*.db-shm
+*.db-wal
+
+# Logs
 *.log
+
+# Firebase Service Account — مهم جداً
+**/Firebase/*.json
+
+# Secrets & Config
+appsettings.Development.json
+**/secrets.json
+
+# NuGet
+*.nupkg
+project.lock.json
+
+# OS
+.DS_Store
+Thumbs.db
