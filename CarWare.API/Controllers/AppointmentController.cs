@@ -12,12 +12,12 @@ namespace CarWare.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AppointmentsController : ControllerBase
+    public class AppointmentController : ControllerBase
     {
         private readonly IAppointmentService _appointmentService;
         private readonly IMapper _mapper;
 
-        public AppointmentsController(IAppointmentService appointmentService, IMapper mapper)
+        public AppointmentController(IAppointmentService appointmentService, IMapper mapper)
         {
             _appointmentService = appointmentService;
             _mapper = mapper;
