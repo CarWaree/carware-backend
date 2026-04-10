@@ -3,6 +3,7 @@ using CarWare.Application.DTOs.Appointment;
 using CarWare.Application.DTOs.History;
 using CarWare.Application.DTOs.Maintenance;
 using CarWare.Application.DTOs.maintenanceReminder;
+using CarWare.Application.DTOs.Notification;
 using CarWare.Application.DTOs.Profile;
 using CarWare.Application.DTOs.Provider_Center;
 using CarWare.Application.DTOs.Vehicle;
@@ -74,6 +75,10 @@ namespace CarWare.Application.Mapping
                     opt => opt.MapFrom(src => src.ServiceRequestServices
                         .Select(s => s.Description)
                         .FirstOrDefault()));
+            //notification system
+            CreateMap<Notification, NotificationDto>();
+
+            CreateMap<Notification, NotificationDetailsDto>();
         }
     }
 }

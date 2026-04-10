@@ -115,6 +115,8 @@ namespace CarWare.API
             builder.Services.AddScoped<IProfileService, ProfileService>();
             //History
             builder.Services.AddScoped<IHistoryService, HistoryService>();
+            //Notification
+            builder.Services.AddScoped<INotificationService, NotificationService>();
 
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
