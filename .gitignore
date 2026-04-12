@@ -15,3 +15,18 @@ obj/
 
 # Logs
 *.log
+
+# Firebase Service Account — مهم جداً
+**/Firebase/*.json
+
+# Secrets & Config
+appsettings.Development.json
+**/secrets.json
+
+# NuGet
+*.nupkg
+project.lock.json
+
+# OS
+.DS_Store
+Thumbs.db
