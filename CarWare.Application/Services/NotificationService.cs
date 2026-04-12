@@ -1,10 +1,10 @@
 ﻿using AutoMapper;
 using CarWare.Application.Common;
+using CarWare.Application.Common.helper;
 using CarWare.Application.DTOs.Notification;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
-using CarWare.Domain.helper;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;

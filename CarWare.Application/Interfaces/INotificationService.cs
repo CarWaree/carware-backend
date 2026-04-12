@@ -1,6 +1,6 @@
 ﻿using CarWare.Application.Common;
+using CarWare.Application.Common.helper;
 using CarWare.Application.DTOs.Notification;
-using CarWare.Domain.helper;
 using System;
 using System.Collections.Generic;
 using System.Linq;

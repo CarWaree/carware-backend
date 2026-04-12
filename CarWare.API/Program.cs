@@ -1,10 +1,11 @@
 ﻿using CarWare.API.Middlewares;
+using CarWare.Application.Common.helper;
+using CarWare.Application.Common.Security;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Mapping;
 using CarWare.Application.Services;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
-using CarWare.Domain.helper;
 using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
@@ -15,6 +16,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System.Text;
 
 namespace CarWare.API
@@ -119,7 +121,12 @@ namespace CarWare.API
             builder.Services.AddScoped<IHistoryService, HistoryService>();
             //Notification
             builder.Services.AddScoped<INotificationService, NotificationService>();
-
+            //Otp Generator
+            builder.Services.AddScoped<OtpGenerator>();
+            //JWT Token
+            builder.Services.AddScoped<JwtTokenGenerator>();
+            //Refresh Token
+            builder.Services.AddScoped<RefreshTokenGenerator>();
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);

@@ -12,7 +12,11 @@ namespace CarWare.Domain.Entities
         public string LastName { get; set; }
         public string FullName => $"{FirstName} {LastName}";
 
+        public string GoogleId { get; set; }
+        public bool IsProfileCompleted { get; set; } = false;
+
         public string ProfileImageUrl { get; set; }
+        public string PendingEmail { get; set; }
 
         //Navigation Property
         public ICollection<Vehicle> vehicles { get; set; }
@@ -20,7 +24,5 @@ namespace CarWare.Domain.Entities
         public List<RefreshToken> RefreshTokens { get; set; }
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public ICollection<DeviceToken> DeviceTokens { get; set; } = new List<DeviceToken>();
-
-        public string PendingEmail { get; set; }
     }
 }

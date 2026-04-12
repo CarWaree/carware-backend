@@ -1,27 +1,23 @@
 ﻿using AutoMapper;
 using CarWare.Application.Common;
+using CarWare.Application.Common.Cache;
+using CarWare.Application.Common.helper;
+using CarWare.Application.Common.Helpers;
+using CarWare.Application.Common.Security;
 using CarWare.Application.DTOs.Auth;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
-using CarWare.Domain.helper;
-using CarWare.Domain.Helpers;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
@@ -30,294 +26,337 @@ namespace CarWare.Application.Services
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly OtpGenerator _otpGenerator;
         private readonly IDistributedCache _cache;
         private readonly IConfiguration _config;
         private readonly IEmailSender _emailSender;
+        private readonly RefreshTokenGenerator _refreshToken;
+        private readonly JwtTokenGenerator _jwtToken;
+        private readonly IMapper _mapper;
+        private readonly ILogger<AuthService> _logger;
         private const int OtpValidityMinutes = 3;
         private const int MaxOtpAttempts = 5;
-        private readonly JWT _jwt;
-
-        private readonly IMapper _mapper;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            IOptions<JWT> jwt,
+            OtpGenerator otpGenerator,
             IEmailSender emailSender,
+            RefreshTokenGenerator refreshToken,
+            JwtTokenGenerator jwtToken,
             IDistributedCache cache,
             IConfiguration config,
-            IMapper mapper)
+            IMapper mapper,
+            ILogger<AuthService> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
-            _jwt = jwt.Value;
+            _otpGenerator = otpGenerator;
             _cache = cache;
             _config = config;
             _emailSender = emailSender;
+            _refreshToken = refreshToken;
+            _jwtToken = jwtToken;
             _mapper = mapper;
+            _logger = logger;
         }
 
-        private string GetCacheKey(string email) => $"OTP_{email.ToUpperInvariant()}";
-
-        private async Task<JwtSecurityToken> CreateJwtToken(ApplicationUser user)
-        {
-
-            #region Claims
-            var userClaims = await _userManager.GetClaimsAsync(user);
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var roleClaims = new List<Claim>();
-            foreach (var role in roles)
-                roleClaims.Add(new Claim(ClaimTypes.Role, role));
-
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim("firstName", user.FirstName),
-                new Claim("lastName", user.LastName)
-            }
-            .Union(userClaims)
-            .Union(roleClaims);
-            #endregion
-
-            #region Signing Credentials
-            var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key));
-            var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
-            #endregion
-
-            #region Design Token 
-            var jwtSecurityToken = new JwtSecurityToken(
-                issuer: _jwt.Issuer,
-                audience: _jwt.Audience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(_jwt.AccessTokenDurationMinutes),
-                signingCredentials: signingCredentials);
-            #endregion
-
-            //var tokenString = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
-            return jwtSecurityToken;
-        }
-
+        // ─── Register
         public async Task<Result<RegisterResponseDto>> RegisterAsync(RegisterDto model)
         {
+            _logger.LogInformation("Register attempt for {Email}", model.Email);
+
             if (await _userManager.FindByNameAsync(model.Username) != null)
                 return Result<RegisterResponseDto>.Fail("Username is already taken");
 
             if (await _userManager.FindByEmailAsync(model.Email) != null)
-                return Result<RegisterResponseDto>.Fail("Email is already registered");
+            {
+                _logger.LogWarning("Register failed - email exists {Email}", model.Email);
+                return Result<RegisterResponseDto>.Fail("Email already registered");
+            }
 
             var user = _mapper.Map<ApplicationUser>(model);
             user.EmailConfirmed = false;
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
-                return Result<RegisterResponseDto>.Fail(string.Join(", ", result.Errors.Select(e => e.Description)));
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                _logger.LogWarning("Register failed for {Email}: {Errors}", model.Email, errors);
+                return Result<RegisterResponseDto>.Fail(errors);
+            }
 
             await _userManager.AddToRoleAsync(user, "User");
 
-            // Generate OTP
-            var otp = OtpGenerator.Generate();
+            await SendEmailOtpAsync(user);
 
-            // Cache keys (
-            var otpKey = $"email_verify_otp:{otp}";
-            var attemptsKey = $"email_verify_otp_attempts:{user.Id}";
+            var response = _mapper.Map<RegisterResponseDto>(user);
+            response.IsEmailVerified = false;
 
-            // Store OTP → Email
-            await _cache.SetStringAsync(
-                otpKey,
-                user.Id,
-                new DistributedCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
-                });
-
-            // reset attempts if re-register
-            await _cache.RemoveAsync(attemptsKey);
-
-            // Send OTP via email
-            await _emailSender.SendEmailAsync(
-                user.Email,
-                "Email Verification Code",
-                $"Your verification code is <b>{otp}</b>. It expires in {OtpValidityMinutes} minutes."
-            );
-
-            var RegisterResponse = _mapper.Map<RegisterResponseDto>(user);
-            RegisterResponse.IsEmailVerified = false;
-
-            return Result<RegisterResponseDto>.Ok(RegisterResponse);
+            return Result<RegisterResponseDto>.Ok(response);
         }
 
+        // ─── Verify Email OTP 
+        public async Task<Result<VerifyEmailResponseDto>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto)
+        {
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+
+            if (user == null || user.EmailConfirmed)
+                return Result<VerifyEmailResponseDto>.Fail("Invalid request");
+
+            var attemptsKey = CacheKeys.EmailVerifyOtpAttempts(user.Id);
+            var attempts = await GetAttemptsAsync(attemptsKey);
+
+            if (attempts >= MaxOtpAttempts)
+                return Result<VerifyEmailResponseDto>.Fail("OTP locked");
+
+            var cachedOtp = await _cache.GetStringAsync(CacheKeys.EmailVerifyOtp(user.Id));
+
+            if (!string.Equals(cachedOtp, dto.Otp, StringComparison.Ordinal))
+            {
+                await OtpAttemptManager.IncrementAsync(_cache, attemptsKey, attempts, OtpValidityMinutes);
+                return Result<VerifyEmailResponseDto>.Fail("Invalid OTP");
+            }
+
+            await _cache.RemoveAsync(CacheKeys.EmailVerifyOtp(user.Id));
+            await _cache.RemoveAsync(attemptsKey);
+
+            user.EmailConfirmed = true;
+
+            var refreshToken = _refreshToken.Generate();
+            user.RefreshTokens.Add(refreshToken);
+
+            await _userManager.UpdateAsync(user);
+
+            var jwt = await _jwtToken.CreateToken(user);
+
+            return Result<VerifyEmailResponseDto>.Ok(new VerifyEmailResponseDto
+            {
+                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
+                RefreshToken = refreshToken.Token
+            });
+        }
+
+        // ─── Resend Email OTP 
+        public async Task<Result<bool>> ResendEmailOtpAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+                return Result<bool>.Fail("User not found");
+
+            if (user.EmailConfirmed)
+                return Result<bool>.Fail("Email is already verified");
+
+            await SendEmailOtpAsync(user);
+
+            return Result<bool>.Ok(true);
+        }
+
+        // ─── Login 
         public async Task<Result<LoginResponseDto>> LoginAsync(LoginDto loginDto)
         {
             var user = await _userManager.FindByEmailAsync(loginDto.EmailOrUsername)
                 ?? await _userManager.FindByNameAsync(loginDto.EmailOrUsername);
 
-            if (user is null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
+            if (user == null)
                 return Result<LoginResponseDto>.Fail("Invalid Username or Password");
 
+            var signInResult = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, lockoutOnFailure: true);
+
+            if (signInResult.IsLockedOut)
+            {
+                _logger.LogWarning("User {UserId} is locked out", user.Id);
+                return Result<LoginResponseDto>.Fail("Account locked. Try again later.");
+            }
+
+            if (!signInResult.Succeeded)
+            {
+                _logger.LogWarning("Invalid login attempt for {Email}", loginDto.EmailOrUsername);
+                return Result<LoginResponseDto>.Fail("Invalid Username or Password");
+            }
+
             if (!user.EmailConfirmed)
-                return Result<LoginResponseDto>.Fail("Please verify your email before logging in.");
+                return Result<LoginResponseDto>.Fail("Please verify your email");
 
-            var jwtSecurityToken = await CreateJwtToken(user);
-            var rolesList = await _userManager.GetRolesAsync(user);
+            var roles = await _userManager.GetRolesAsync(user);
+            var refreshToken = _refreshToken.Generate();
+            user.RefreshTokens.Add(refreshToken);
+            await _userManager.UpdateAsync(user);
 
-            var authDto = new LoginResponseDto
+            var jwt = await _jwtToken.CreateToken(user);
+
+            _logger.LogInformation("User {UserId} logged in successfully", user.Id);
+
+            return Result<LoginResponseDto>.Ok(new LoginResponseDto
             {
                 IsAuthenticated = true,
-                Username = user.UserName,
-                Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Roles = rolesList.ToList(),
-                Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken),
-            };
-
-            if(user.RefreshTokens.Any(t => t.IsActive))
-            {
-                var activeRefreshToken = user.RefreshTokens.FirstOrDefault(t => t.IsActive);
-                authDto.RefreshToken = activeRefreshToken.Token;
-                authDto.RefreshTokenExpiration = activeRefreshToken.ExpiresOn;
-            }
-            else
-            {
-                var refreshToken = GenerateRefreshToken();
-                authDto.RefreshToken = refreshToken.Token;
-                authDto.RefreshTokenExpiration = refreshToken.ExpiresOn;
-
-                user.RefreshTokens.Add(refreshToken);
-                await _userManager.UpdateAsync(user);
-            }
-
-            return Result<LoginResponseDto>.Ok(authDto);
+                Username = user.UserName,
+                Email = user.Email,
+                Roles = roles.ToList(),
+                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
+                RefreshToken = refreshToken.Token,
+                RefreshTokenExpiration = refreshToken.ExpiresOn
+            });
         }
 
-        public async Task<Result<bool>> RequestResetAsync(ForgetPasswordDto forgetDTO)
+        // ─── Refresh Token 
+        public async Task<Result<AuthResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto dto)
         {
-            var email = forgetDTO.Email.Trim().ToUpper();
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userManager.Users
+                .Include(u => u.RefreshTokens)
+                .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == dto.RefreshToken));
 
-            if (user == null) return Result<bool>.Ok(true);
+            if (user == null)
+            {
+                _logger.LogWarning("Refresh token not found");
+                return Result<AuthResponseDto>.Fail("Invalid token");
+            }
 
-            // Generate OTP
-            var otpBytes = new byte[4];
-            using (var rng = RandomNumberGenerator.Create())
-                rng.GetBytes(otpBytes);
+            var token = user.RefreshTokens.FirstOrDefault(t => t.Token == dto.RefreshToken);
 
-            var otpCode = (BitConverter.ToUInt32(otpBytes, 0) % 900000 + 100000).ToString();
+            if (token == null || token.RevokedOn != null || token.ExpiresOn <= DateTime.UtcNow)
+            {
+                _logger.LogWarning("Expired or revoked refresh token used for user {UserId}", user.Id);
+                return Result<AuthResponseDto>.Fail("Token expired");
+            }
 
-            var cacheKey = $"otp:{otpCode}";
+            token.RevokedOn = DateTime.UtcNow;
+            user.RefreshTokens.RemoveAll(t => !t.IsActive);
 
-            await _cache.SetStringAsync(cacheKey, email,
-                new DistributedCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
-                });
+            var newRefreshToken = _refreshToken.Generate();
+            user.RefreshTokens.Add(newRefreshToken);
+            await _userManager.UpdateAsync(user);
 
-            // Send email
-            await _emailSender.SendEmailAsync(
-                forgetDTO.Email,
-                "Password Reset Code",
-                $"Your verification code is <b>{otpCode}</b>. It expires in 3 minutes."
-            );
+            var jwt = await _jwtToken.CreateToken(user);
+
+            _logger.LogInformation("Refresh token rotated for user {UserId}", user.Id);
+
+            return Result<AuthResponseDto>.Ok(new AuthResponseDto
+            {
+                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
+                RefreshToken = newRefreshToken.Token,
+                AccessTokenExpiration = jwt.ValidTo,
+                RefreshTokenExpiration = newRefreshToken.ExpiresOn,
+                IsProfileCompleted = user.IsProfileCompleted
+            });
+        }
+
+        // ─── Revoke Refresh Token 
+        public async Task<Result<bool>> RevokeRefreshTokenAsync(string refreshToken)
+        {
+            var user = await _userManager.Users
+                .Include(u => u.RefreshTokens)
+                .SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
+
+            if (user == null)
+                return Result<bool>.Fail("Invalid token");
+
+            var token = user.RefreshTokens.FirstOrDefault(t => t.Token == refreshToken);
+
+            if (token == null || !token.IsActive)
+                return Result<bool>.Fail("Already revoked");
+
+            token.RevokedOn = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            _logger.LogInformation("User {UserId} logged out", user.Id);
 
             return Result<bool>.Ok(true);
         }
 
+        // ─── Forget Password 
+        public async Task<Result<bool>> RequestResetAsync(ForgetPasswordDto forgetDTO)
+        {
+            _logger.LogInformation("Password reset requested for {Email}", forgetDTO.Email);
+
+            var user = await _userManager.FindByEmailAsync(forgetDTO.Email);
+
+            // Return Ok regardless to prevent email enumeration
+            if (user == null) return Result<bool>.Ok(true);
+
+            await SendResetOtpAsync(user, forgetDTO.Email);
+
+            return Result<bool>.Ok(true);
+        }
+
+        // ─── Verify Reset OTP 
         public async Task<Result<ResetPasswordResultDto>> VerifyOtpAsync(VerifyOtpDto optDto)
         {
-            var userId = await _cache.GetStringAsync($"otp:{optDto.Otp}");
-            if (string.IsNullOrEmpty(userId))
-                return Result<ResetPasswordResultDto>.Fail("Invalid or expired OTP");
+            var user = await _userManager.FindByEmailAsync(optDto.Email);
+            if (user == null)
+                return Result<ResetPasswordResultDto>.Fail("Invalid OTP");
 
-            var attemptsKey = $"otp_attempts:{userId}";
-            var attemptsStr = await _cache.GetStringAsync(attemptsKey);
-            var attempts = string.IsNullOrEmpty(attemptsStr) ? 0 : int.Parse(attemptsStr);
+            var attemptsKey = CacheKeys.ResetOtpAttempts(user.Id);
+            var attempts = await GetAttemptsAsync(attemptsKey);
 
             if (attempts >= MaxOtpAttempts)
+                return Result<ResetPasswordResultDto>.Fail("OTP locked due to too many attempts");
+
+            var cachedOtp = await _cache.GetStringAsync(CacheKeys.ResetOtp(user.Id));
+            if (cachedOtp == null || cachedOtp != optDto.Otp)
             {
-                await _cache.RemoveAsync($"otp:{userId}");
-                await _cache.RemoveAsync(attemptsKey);
-                return Result<ResetPasswordResultDto>.Fail("OTP has been locked due to too many attempts");
+                await OtpAttemptManager.IncrementAsync(_cache, attemptsKey, attempts, OtpValidityMinutes);
+                return Result<ResetPasswordResultDto>.Fail("Invalid or expired OTP");
             }
 
-            //Get user by Id
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                await IncrementOtpAttempts.IncrementOtpAttemptsAsync(_cache, attemptsKey, attempts, OtpValidityMinutes);
-                return Result<ResetPasswordResultDto>.Fail("User not found");
-            }
-
-            //cleanup
-            await _cache.RemoveAsync($"otp:{optDto.Otp}");
+            await _cache.RemoveAsync(CacheKeys.ResetOtp(user.Id));
             await _cache.RemoveAsync(attemptsKey);
 
-            // Generate Identity reset token
             var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-
-            // Create a short handle (GUID)
             var handle = Guid.NewGuid().ToString("N");
 
-            // Store mapping: handle -> actual resetToken (consider encrypting if you want)
-            await _cache.SetStringAsync($"reset_handle:{handle}", resetToken,
+            await _cache.SetStringAsync(CacheKeys.ResetHandle(handle), resetToken,
                 new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) });
 
-            // Store also handle -> email if you want quick lookup or extra validation
-            await _cache.SetStringAsync($"reset_handle_email:{handle}", userId,
+            await _cache.SetStringAsync(CacheKeys.ResetHandleUserId(handle), user.Id,
                 new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) });
 
-            // Return handle to client (short and safe)
             return Result<ResetPasswordResultDto>.Ok(new ResetPasswordResultDto { Token = handle });
         }
 
+        // ─── Reset Password
         public async Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto resetDto)
         {
             if (resetDto.NewPassword != resetDto.ConfirmPassword)
                 return Result<bool>.Fail("New Password and Confirmation do not match");
 
-            // The client sends the handle (not the real Identity token)
-            var handle = resetDto.Token;
+            var handle = resetDto.AccessToken;
             if (string.IsNullOrWhiteSpace(handle))
                 return Result<bool>.Fail("Token is required.");
 
-            // Retrieve the real reset token from cache
-            var realResetToken = await _cache.GetStringAsync($"reset_handle:{handle}");
-            var email = await _cache.GetStringAsync($"reset_handle_email:{handle}");
-            if (realResetToken == null || email == null)
+            var realResetToken = await _cache.GetStringAsync(CacheKeys.ResetHandle(handle));
+            var userId = await _cache.GetStringAsync(CacheKeys.ResetHandleUserId(handle));
+
+            if (realResetToken == null || userId == null)
                 return Result<bool>.Fail("The password reset token is invalid or has expired.");
 
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
                 return Result<bool>.Fail("User not found.");
 
-            // Use the real Identity token
             var result = await _userManager.ResetPasswordAsync(user, realResetToken, resetDto.NewPassword);
-
             if (!result.Succeeded)
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 return Result<bool>.Fail(errors);
             }
 
-            // remove from cache (invalidate handle)
-            await _cache.RemoveAsync($"reset_handle:{handle}");
-            await _cache.RemoveAsync($"reset_handle_email:{handle}");
+            await _cache.RemoveAsync(CacheKeys.ResetHandle(handle));
+            await _cache.RemoveAsync(CacheKeys.ResetHandleUserId(handle));
 
             return Result<bool>.Ok(true);
         }
 
+        // ─── Google OAuth (Callback)
         public (string RedirectUrl, AuthenticationProperties Props) GetGoogleRedirectUrl(string? returnUrl = null)
         {
             var baseUrl = _config["ExternalAuth:Google:CallbackBaseUrl"];
             var callbackPath = _config["ExternalAuth:Google:CallbackPath"];
-
             var redirectUrl = $"{baseUrl}{callbackPath}?returnUrl={returnUrl}";
             var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
-
             return (redirectUrl, props);
         }
 
@@ -338,7 +377,6 @@ namespace CarWare.Application.Services
             if (!signInResult.Succeeded)
             {
                 var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-
                 user = await _userManager.FindByEmailAsync(email);
 
                 if (user == null)
@@ -346,10 +384,11 @@ namespace CarWare.Application.Services
                     user = new ApplicationUser
                     {
                         Email = email,
-                        UserName = email
+                        UserName = UsernameGenerator.Generate(email),
+                        EmailConfirmed = true
                     };
-
                     await _userManager.CreateAsync(user);
+                    await _userManager.AddToRoleAsync(user, "User");
                 }
 
                 await _userManager.AddLoginAsync(user, info);
@@ -359,198 +398,100 @@ namespace CarWare.Application.Services
                 user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
             }
 
-            var jwtToken = await CreateJwtToken(user);
-            var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+            var refreshToken = _refreshToken.Generate();
+            user.RefreshTokens.Add(refreshToken);
+            await _userManager.UpdateAsync(user);
+
+            var jwt = await _jwtToken.CreateToken(user);
 
             return new AuthResponseDto
             {
-                Message = "Google Login Successful",
-                Token = token
+                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
+                RefreshToken = refreshToken.Token,
+                IsProfileCompleted = user.IsProfileCompleted
             };
         }
 
+        // ─── Google Login (Mobile / SPA) 
         public async Task<AuthResponseDto> GoogleLoginAsync(string idToken)
         {
             var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
-
-            var email = payload.Email;
-            var name = payload.Name;
-
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userManager.FindByEmailAsync(payload.Email);
 
             if (user == null)
             {
                 user = new ApplicationUser
                 {
-                    Email = email,
-                    UserName = email
+                    Email = payload.Email,
+                    UserName = UsernameGenerator.Generate(payload.Email),
+                    EmailConfirmed = true,
+                    FirstName = payload.Name?.Split(' ')[0] ?? "",
+                    LastName = payload.Name?.Split(' ').Skip(1).FirstOrDefault() ?? "",
+                    GoogleId = payload.Subject
                 };
-
                 await _userManager.CreateAsync(user);
+                await _userManager.AddToRoleAsync(user, "User");
             }
 
-            var jwtToken = await CreateJwtToken(user);
-            var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+            var refreshToken = _refreshToken.Generate();
+            user.RefreshTokens.Add(refreshToken);
+            await _userManager.UpdateAsync(user);
+
+            var jwt = await _jwtToken.CreateToken(user);
 
             return new AuthResponseDto
             {
-                Message = "Google Login Success",
-                Token = token
+                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
+                RefreshToken = refreshToken.Token,
+                IsProfileCompleted = user.IsProfileCompleted
             };
         }
 
-        public async Task<Result<VerifyEmailResponseDto>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto)
+        // ─── Private Helpers 
+        private async Task SendEmailOtpAsync(ApplicationUser user)
         {
-            var userId = await _cache.GetStringAsync($"email_verify_otp:{dto.Otp}");
-            if (string.IsNullOrEmpty(userId))
-                return Result<VerifyEmailResponseDto>.Fail("Invalid or expired OTP");
+            var otp = _otpGenerator.Generate();
 
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null || user.EmailConfirmed)
-                return Result<VerifyEmailResponseDto>.Fail("Invalid or expired OTP");
-
-            var attemptsKey = $"email_verify_otp_attempts:{user.Id}";
-            var attemptsStr = await _cache.GetStringAsync(attemptsKey);
-            var attempts = string.IsNullOrEmpty(attemptsStr) ? 0 : int.Parse(attemptsStr);
-
-            if (attempts >= MaxOtpAttempts)
-            {
-                await _cache.RemoveAsync($"email_verify_otp:{dto.Otp}");
-                await _cache.RemoveAsync(attemptsKey);
-                return Result<VerifyEmailResponseDto>.Fail("OTP has been locked due to too many attempts");
-            }
-
-            var email = await _cache.GetStringAsync($"email_verify_otp:{dto.Otp}");
-            if (string.IsNullOrEmpty(email))
-            {
-                await IncrementOtpAttempts.IncrementOtpAttemptsAsync(_cache, attemptsKey, attempts, OtpValidityMinutes);
-                return Result<VerifyEmailResponseDto>.Fail("Invalid or expired OTP");
-            }
-
-            //confirm email
-            user.EmailConfirmed = true;
-            await _userManager.UpdateAsync(user);
-
-            //cleanup
-            await _cache.RemoveAsync($"email_verify_otp:{dto.Otp}");
-            await _cache.RemoveAsync(attemptsKey);
-
-            //generate JWT taken
-            var jwt = await CreateJwtToken(user);
-
-            return Result<VerifyEmailResponseDto>.Ok(new VerifyEmailResponseDto
-            {
-                Token = new JwtSecurityTokenHandler().WriteToken(jwt)
-            });
-        }
-
-        public async Task<Result<bool>> ResendEmailOtpAsync(string email)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-                return Result<bool>.Fail("User not found");
-
-            if (user.EmailConfirmed)
-                return Result<bool>.Fail("Email is already verified");
-
-            // Generate new OTP
-            var otp = OtpGenerator.Generate() ; 
-
-            // Save OTP in cache
             await _cache.SetStringAsync(
-                $"email_verify_otp:{otp}",
-                user.Id,
+                CacheKeys.EmailVerifyOtp(user.Id),
+                otp,
                 new DistributedCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
                 });
 
-            // Reset attempts
-            await _cache.RemoveAsync($"email_verify_otp_attempts:{user.Id}");
+            await _cache.RemoveAsync(CacheKeys.EmailVerifyOtpAttempts(user.Id));
 
-            // Send email
             await _emailSender.SendEmailAsync(
                 user.Email,
-                "Resend Verification Code",
+                "Email Verification Code",
                 $"Your verification code is <b>{otp}</b>. It expires in {OtpValidityMinutes} minutes."
             );
-
-            return Result<bool>.Ok(true);
         }
 
-        public async Task<Result<LoginResponseDto>> RefreshTokenAsync(string refreshToken)
+        private async Task SendResetOtpAsync(ApplicationUser user, string email)
         {
-            var user = await _userManager.Users
-                .Include(u => u.RefreshTokens)
-                .SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
+            var otp = _otpGenerator.Generate();
 
-            if (user == null)
-                return Result<LoginResponseDto>.Fail("Invalid refresh token");
+            await _cache.SetStringAsync(
+                CacheKeys.ResetOtp(user.Id),
+                otp,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(OtpValidityMinutes)
+                });
 
-            var token = user.RefreshTokens.Single(t => t.Token == refreshToken);
-
-            if (!token.IsActive)
-                return Result<LoginResponseDto>.Fail("Refresh token is expired");
-
-            // Generate new JWT
-            var jwtToken = await CreateJwtToken(user);
-
-            // Rotate refresh token
-            token.RevokedOn = DateTime.UtcNow;
-
-            var newRefreshToken = GenerateRefreshToken();
-            user.RefreshTokens.Add(newRefreshToken);
-            await _userManager.UpdateAsync(user);
-
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var response = new LoginResponseDto
-            {
-                IsAuthenticated = true,
-                Username = user.UserName,
-                Email = user.Email,
-                Roles = roles.ToList(),
-                Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                RefreshToken = newRefreshToken.Token,
-                RefreshTokenExpiration = newRefreshToken.ExpiresOn
-            };
-
-            return Result<LoginResponseDto>.Ok(response);
+            await _emailSender.SendEmailAsync(
+                email,
+                "Reset Password OTP",
+                $"Your OTP is <b>{otp}</b>. It expires in {OtpValidityMinutes} minutes."
+            );
         }
 
-        private RefreshToken GenerateRefreshToken()
+        private async Task<int> GetAttemptsAsync(string attemptsKey)
         {
-            var randomNumber = new byte[32];
-
-            RandomNumberGenerator.Fill(randomNumber);
-
-            return new RefreshToken
-            {
-                Token = Convert.ToBase64String(randomNumber),
-                ExpiresOn = DateTime.UtcNow.AddDays(_jwt.RefreshTokenDurationDays),
-                CreatedOn = DateTime.UtcNow
-            };
-        }
-
-        public async Task<Result<bool>> RevokeRefreshTokenAsync(string refreshToken)
-        {
-            var user = await _userManager.Users
-                .Include(u => u.RefreshTokens)
-                .SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
-
-            if (user == null)
-                return Result<bool>.Fail("Invalid refresh token");
-
-            var token = user.RefreshTokens.Single(t => t.Token == refreshToken);
-
-            if (!token.IsActive)
-                return Result<bool>.Fail("Refresh token already revoked");
-
-            token.RevokedOn = DateTime.UtcNow;
-
-            await _userManager.UpdateAsync(user);
-
-            return Result<bool>.Ok(true);
+            var attemptsStr = await _cache.GetStringAsync(attemptsKey);
+            return string.IsNullOrEmpty(attemptsStr) ? 0 : int.Parse(attemptsStr);
         }
     }
 }

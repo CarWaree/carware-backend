@@ -1,4 +1,4 @@
-﻿namespace CarWare.Domain.helper
+﻿namespace CarWare.Application.Common.Security
 {
     public class JWT
     {

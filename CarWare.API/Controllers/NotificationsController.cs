@@ -1,5 +1,5 @@
-﻿using CarWare.Application.Interfaces;
-using CarWare.Domain.helper;
+﻿using CarWare.Application.Common.helper;
+using CarWare.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
