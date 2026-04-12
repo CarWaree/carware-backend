@@ -1,9 +1,8 @@
-﻿using System;
-
-namespace CarWare.Application.DTOs.Auth
+﻿namespace CarWare.Application.DTOs.Auth
 {
     public class VerifyEmailResponseDto
     {
-        public string Token { get; set; }
+        public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace CarWare.Domain.helper
+﻿namespace CarWare.Application.Common.helper
 {
     public class PaginationParameters
     {
@@ -10,7 +10,7 @@
         public int PageSize
         {
             get => _pageSize;
-            set => _pageSize = (value > MaxPageSize) ? MaxPageSize : value;
+            set => _pageSize = value > MaxPageSize ? MaxPageSize : value;
         }
     }
 }

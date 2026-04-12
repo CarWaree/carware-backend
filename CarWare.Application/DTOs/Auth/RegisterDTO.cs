@@ -4,7 +4,9 @@ namespace CarWare.Application.DTOs.Auth
 {
     public class RegisterDto
     {
+        [Required]
         public string FirstName { get; set; }
+        [Required]
         public string LastName { get; set; }
 
         [Required(ErrorMessage = "Username is required")] 

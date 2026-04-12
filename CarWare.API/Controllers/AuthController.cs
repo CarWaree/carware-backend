@@ -24,6 +24,19 @@ namespace CarWare.API.Controllers
             _config = config;
         }
 
+        private void SetRefreshTokenCookie(string token, DateTime? expires = null)
+        {
+            Response.Cookies.Append("refreshToken", token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = expires.HasValue
+                    ? new DateTimeOffset(expires.Value)
+                    : DateTimeOffset.UtcNow.AddDays(7)
+            });
+        }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto dto)
         {
@@ -31,7 +44,35 @@ namespace CarWare.API.Controllers
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
-            return Ok(ApiResponseGeneric<RegisterResponseDto>.Success(result.Data, "Registration successful"));
+            return Ok(ApiResponseGeneric<RegisterResponseDto>
+                .Success(result.Data, "Registration successful. Please verify your email"));
+        }
+
+        [HttpPost("verify-email-otp")]
+        public async Task<IActionResult> VerifyEmailOtp([FromBody] VerifyEmailOtpDto dto)
+        {
+            var result = await _authService.VerifyEmailOtpAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error!));
+
+            SetRefreshTokenCookie(result.Data.RefreshToken);
+
+            return Ok(ApiResponseGeneric<VerifyEmailResponseDto>.Success(
+                    data: result.Data,
+                    message: "OTP verified successfully"
+            ));
+        }
+
+        [HttpPost("resend-email-otp")]
+        public async Task<IActionResult> ResendEmailOtpAsync([FromBody] string Email)
+        {
+            var result = await _authService.ResendEmailOtpAsync(Email);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error!));
+
+            return Ok(ApiResponse.Success("A new verification code has been sent to your email."));
         }
 
         [HttpPost("login")]
@@ -41,8 +82,7 @@ namespace CarWare.API.Controllers
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error));
 
-            if (!string.IsNullOrEmpty(result.Data.RefreshToken))
-                SetRefreshTokenInCookie(result.Data.RefreshToken, result.Data.RefreshTokenExpiration);
+            SetRefreshTokenCookie(result.Data.RefreshToken, result.Data.RefreshTokenExpiration);
 
             return Ok(ApiResponseGeneric<LoginResponseDto>.Success(result.Data, "Login successful"));
         }
@@ -62,7 +102,7 @@ namespace CarWare.API.Controllers
         public async Task<IActionResult> VerifyOtpAsync([FromBody] VerifyOtpDto dto)
         {
             var result = await _authService.VerifyOtpAsync(dto);
-            if (result == null)
+            if (!result.Success)
                 return BadRequest(ApiResponse.Fail("Invalid or expired OTP"));
 
             return Ok(ApiResponseGeneric<ResetPasswordResultDto>.Success(
@@ -111,67 +151,27 @@ namespace CarWare.API.Controllers
             }
         }
 
-        [HttpPost("verify-email-otp")]
-        public async Task<IActionResult> VerifyEmailOtp([FromBody] VerifyEmailOtpDto dto)
-        {
-            var result = await _authService.VerifyEmailOtpAsync(dto);
-
-            if (!result.Success)
-                return BadRequest(ApiResponse.Fail(result.Error!));
-
-            return Ok(ApiResponseGeneric<VerifyEmailResponseDto>.Success(
-                    data: result.Data!,
-                    message: "OTP verified successfully"
-            ));
-        }
-
-        [HttpPost("resend-email-otp")]
-        public async Task<IActionResult> ResendEmailOtpAsync([FromBody] string email)
-        {
-            var result = await _authService.ResendEmailOtpAsync(email);
-
-            if (!result.Success)
-                return BadRequest(ApiResponse.Fail(result.Error!));
-
-            return Ok(ApiResponse.Success("A new verification code has been sent to your email."));
-        }
-
-        private void SetRefreshTokenInCookie(string refreshToken, DateTime expires)
-        {
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Expires = expires.ToLocalTime()
-            };
-
-            Response.Cookies.Append("RefreshToken", refreshToken, cookieOptions);
-        }
-
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken()
         {
             var refreshToken = Request.Cookies["refreshToken"];
 
             if (string.IsNullOrEmpty(refreshToken))
-                return Unauthorized(ApiResponse.Fail("Refresh token is missing"));
+                return Unauthorized(ApiResponse.Fail("Missing refresh token"));
 
-            var result = await _authService.RefreshTokenAsync(refreshToken);
+            var dto = new RefreshTokenRequestDto
+            {
+                RefreshToken = refreshToken
+            };
+
+            var result = await _authService.RefreshTokenAsync(dto);
 
             if (!result.Success)
                 return Unauthorized(ApiResponse.Fail(result.Error));
 
-            // Update cookie with new refresh token
-            Response.Cookies.Append("refreshToken",
-                result.Data.RefreshToken,
-                new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = result.Data.RefreshTokenExpiration
-                });
+            SetRefreshTokenCookie(result.Data.RefreshToken);
 
-            return Ok(ApiResponseGeneric<LoginResponseDto>.Success(
+            return Ok(ApiResponseGeneric<AuthResponseDto>.Success(
                 result.Data,
                 "Token refreshed successfully"
             ));
