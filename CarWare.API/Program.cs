@@ -134,7 +134,7 @@ namespace CarWare.API
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
             //Firebase
-            var firebasePath = Path.Combine(Directory.GetCurrentDirectory(), "firebase", "firebase-key.json");
+            var firebasePath = Path.Combine(Directory.GetCurrentDirectory(), "Firebase", "firebase-key.json");
 
             FirebaseApp.Create(new AppOptions()
             {

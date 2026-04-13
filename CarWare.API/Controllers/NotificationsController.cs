@@ -1,6 +1,7 @@
 ﻿using CarWare.Application.Common.helper;
 using CarWare.Application.DTOs.Notification;
 using CarWare.Application.Interfaces;
+using CarWare.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -22,6 +23,23 @@ namespace CarWare.API.Controllers
         private string GetUserId()
         {
             return User.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
+        }
+
+        [HttpGet("test-fcm")]
+        public async Task<IActionResult> TestFcm()
+        {
+            var userID = GetUserId();
+            var dto = new SendNotificationDto
+            {
+                UserId = userID,
+                Title = "Test 🔥",
+                Body = "Hello from backend",
+                Channel = NotificationChannel.Push
+            };
+
+            await _notificationService.SendAsync(dto);
+
+            return Ok("Sent");
         }
 
         [HttpPost("send")]
@@ -55,6 +73,26 @@ namespace CarWare.API.Controllers
                 dto.Channel);
 
             return Ok(new { message = "Broadcast sent successfully" });
+        }
+
+        [HttpPost("register-token")]
+        public async Task<IActionResult> RegisterToken([FromBody] RegisterTokenDto dto)
+        {
+            var userId = GetUserId();
+
+            await _notificationService.RegisterTokenAsync(
+                userId,
+                dto.Token,
+                dto.Platform);
+
+            return Ok(new { message = "Token registered successfully" });
+        }
+
+        [HttpDelete("remove-token")]
+        public async Task<IActionResult> RemoveToken([FromQuery] string token)
+        {
+            await _notificationService.RemoveTokenAsync(token);
+            return Ok(new { message = "Token removed successfully" });
         }
 
         //  Get My Notifications (Paginated)
