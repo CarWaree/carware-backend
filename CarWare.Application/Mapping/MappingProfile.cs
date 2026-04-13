@@ -75,10 +75,15 @@ namespace CarWare.Application.Mapping
                     opt => opt.MapFrom(src => src.ServiceRequestServices
                         .Select(s => s.Description)
                         .FirstOrDefault()));
-            //notification system
+
+            //Notification System
             CreateMap<Notification, NotificationDto>();
 
-            CreateMap<Notification, NotificationDetailsDto>();
+            CreateMap<SendNotificationDto, Notification>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.IsRead, opt => opt.Ignore())
+            .ForMember(dest => dest.IsSent, opt => opt.Ignore());
         }
     }
 }

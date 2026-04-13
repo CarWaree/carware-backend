@@ -18,6 +18,8 @@ namespace CarWare.Infrastructure.UnitOfWork
         private IMaintenanceRepository _maintenanceReminderRepository;
         private IAppointmentRepository _appointmentRepository;
         private IServiceHistoryRepository _serviceHistoryRepository;
+        private INotificationRepository _notificationRepository;
+        private IDeviceTokenRepository _deviceTokenRepository;
 
         public UnitOfWork(ApplicationDbContext dbContext)
         {
@@ -37,6 +39,10 @@ namespace CarWare.Infrastructure.UnitOfWork
         public IServiceHistoryRepository ServiceHistoryRepository
             => _serviceHistoryRepository ??= new ServiceHistoryRepository(_dbContext);
 
+        public INotificationRepository NotificationRepository
+            => _notificationRepository ??= new NotificationRepository(_dbContext);
+        public IDeviceTokenRepository DeviceTokenRepository
+            => _deviceTokenRepository ??= new DeviceTokenRepository(_dbContext);
 
         public async Task<int> CompleteAsync()
             => await _dbContext.SaveChangesAsync();
