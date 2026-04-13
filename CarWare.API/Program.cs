@@ -100,6 +100,7 @@ namespace CarWare.API
 
             //Custom Service [Email Sender]
             builder.Services.AddScoped<IEmailSender, EmailSender>();
+            builder.Services.AddScoped<IFcmService, FcmService>(); 
 
             //Unit of Work
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
