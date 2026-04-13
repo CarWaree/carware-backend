@@ -35,9 +35,16 @@ namespace CarWare.Infrastructure.Repositories
             _dbSet.Remove(entity);
         }
 
+        //Withoud Filter
         public async Task<IEnumerable<T>> GetAllAsync()
         {
             return await _dbSet.ToListAsync();
+        }
+
+        //With Filter
+        public async Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _dbSet.Where(predicate).ToListAsync();
         }
 
         public async Task<T> GetByIdAsync(int Id)

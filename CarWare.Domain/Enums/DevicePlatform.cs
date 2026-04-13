@@ -3,6 +3,7 @@
     public enum DevicePlatform
     {
         Android = 1,
-        Ios = 2
+        Ios = 2, 
+        Web = 3
     }
 }

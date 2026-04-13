@@ -1,5 +1,6 @@
 ﻿using CarWare.Domain.Enums;
 using System;
+using System.Collections.Generic;
 
 namespace CarWare.Domain.Entities
 {
@@ -20,6 +21,8 @@ namespace CarWare.Domain.Entities
         public Vehicle Vehicle { get; set; }
         public ServiceCenter ServiceCenter { get; set; }
         public MaintenanceType Service { get; set; }
+        public ICollection<Payment> Payments { get; set; }
+        = new List<Payment>();
 
         //Optional 
         public int? MaintenanceReminderId { get; set; }
