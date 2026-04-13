@@ -123,6 +123,8 @@ namespace CarWare.API
             builder.Services.AddScoped<IHistoryService, HistoryService>();
             //Notification
             builder.Services.AddScoped<INotificationService, NotificationService>();
+            //payment
+            builder.Services.AddScoped<IPaymentService, PaymentService>();
             //Otp Generator
             builder.Services.AddScoped<OtpGenerator>();
             //JWT Token

@@ -4,6 +4,7 @@ using CarWare.Application.DTOs.History;
 using CarWare.Application.DTOs.Maintenance;
 using CarWare.Application.DTOs.maintenanceReminder;
 using CarWare.Application.DTOs.Notification;
+using CarWare.Application.DTOs.Payment;
 using CarWare.Application.DTOs.Profile;
 using CarWare.Application.DTOs.Provider_Center;
 using CarWare.Application.DTOs.Vehicle;
@@ -84,6 +85,12 @@ namespace CarWare.Application.Mapping
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsRead, opt => opt.Ignore())
             .ForMember(dest => dest.IsSent, opt => opt.Ignore());
+
+            //payment
+            CreateMap<Payment, PaymentDto>()
+             .ForMember(dest => dest.PaymentId, opt => opt.MapFrom(src => src.Id))
+             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+             .ForMember(dest => dest.Method, opt => opt.MapFrom(src => src.Method.ToString()));
         }
     }
 }
