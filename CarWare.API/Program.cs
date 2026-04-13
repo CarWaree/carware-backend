@@ -4,6 +4,8 @@ using CarWare.Application.Common.Security;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Mapping;
 using CarWare.Application.Services;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.Interfaces;
@@ -16,7 +18,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using StackExchange.Redis;
 using System.Text;
 
 namespace CarWare.API
@@ -130,6 +131,14 @@ namespace CarWare.API
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
+
+            //Firebase
+            var firebasePath = Path.Combine(Directory.GetCurrentDirectory(), "firebase", "firebase-key.json");
+
+            FirebaseApp.Create(new AppOptions()
+            {
+                Credential = GoogleCredential.FromFile(firebasePath)
+            });
 
             //CORS
             var MyAllowSpecificOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
