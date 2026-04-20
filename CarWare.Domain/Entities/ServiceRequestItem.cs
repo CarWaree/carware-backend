@@ -1,7 +1,7 @@
 ﻿
 namespace CarWare.Domain.Entities
 {
-    public class ServiceRequestService : BaseEntity
+    public class ServiceRequestItem
     {
         public int ServiceRequestId { get; set; }
         public ServiceRequest ServiceRequest { get; set; }

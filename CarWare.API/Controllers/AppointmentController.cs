@@ -24,34 +24,34 @@ namespace CarWare.API.Controllers
         }
         private string userId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        [HttpPut("{id}/cancel")]
-        public async Task<ActionResult> Cancel(int id)
-        {
-            var result = await _appointmentService.CancelAsync(id, userId);
+        //[HttpPut("{id}/cancel")]
+        //public async Task<ActionResult> Cancel(int id)
+        //{
+        //    var result = await _appointmentService.CancelAsync(id, userId);
 
-            if (!result.Success)
-                return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
+        //    if (!result.Success)
+        //        return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
 
-            return Ok(ApiResponseGeneric<AppointmentDto>.Success(
-                result.Data,
-                "Appointment cancelled successfully"
-            ));
-        }
+        //    return Ok(ApiResponseGeneric<AppointmentDto>.Success(
+        //        result.Data,
+        //        "Appointment cancelled successfully"
+        //    ));
+        //}
 
-        [HttpPut("{id}/status")]
-        //[Authorize(Roles = "Admin,ServiceCenter")]
-        public async Task<ActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto status)
-        {
-            var result = await _appointmentService.UpdateStatusAsync(id, status);
+        //[HttpPut("{id}/status")]
+        ////[Authorize(Roles = "Admin,ServiceCenter")]
+        //public async Task<ActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto status)
+        //{
+        //    var result = await _appointmentService.UpdateStatusAsync(id, status);
 
-            if (!result.Success)
-                return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
+        //    if (!result.Success)
+        //        return BadRequest(ApiResponseGeneric<string>.Fail(result.Error));
 
-            return Ok(ApiResponseGeneric<AppointmentDto>.Success(
-                result.Data,
-                "Appointment status updated successfully"
-            ));
-        }
+        //    return Ok(ApiResponseGeneric<AppointmentDto>.Success(
+        //        result.Data,
+        //        "Appointment status updated successfully"
+        //    ));
+        //}
 
         [HttpGet("my")]
         [Authorize]

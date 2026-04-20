@@ -20,9 +20,8 @@ namespace CarWare.Infrastructure.Context
         public DbSet<ProviderServices> ProviderServices { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<ServiceRequest> ServiceRequest { get; set; }
-        public DbSet<ServiceRequestService> ServiceRequestService { get; set; }
+        public DbSet<ServiceRequestItem> ServiceRequestItem { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-
         public DbSet<Payment> Payments { get; set; }
         public DbSet<DeviceToken> DeviceTokens { get; set; }
 
@@ -122,16 +121,16 @@ namespace CarWare.Infrastructure.Context
                 .WithMany(s => s.Appointments)
                 .HasForeignKey(a => a.ServiceId);
 
-            builder.Entity<ServiceRequestService>()
+            builder.Entity<ServiceRequestItem>()
                 .HasKey(x => new { x.ServiceRequestId, x.MaintenanceTypeId });
 
-            builder.Entity<ServiceRequestService>()
+            builder.Entity<ServiceRequestItem>()
                 .HasOne(x => x.ServiceRequest)
                 .WithMany(sr => sr.ServiceRequestServices)
                 .HasForeignKey(x => x.ServiceRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<ServiceRequestService>()
+            builder.Entity<ServiceRequestItem>()
                 .HasOne(x => x.MaintenanceType)
                 .WithMany()
                 .HasForeignKey(x => x.MaintenanceTypeId)
@@ -139,22 +138,31 @@ namespace CarWare.Infrastructure.Context
 
             builder.Entity<ServiceRequest>()
                 .HasOne(sr => sr.Appointment)
-                .WithOne()
-                .HasForeignKey<ServiceRequest>(sr => sr.AppointmentId)
+                .WithMany()
+                .HasForeignKey(sr => sr.AppointmentId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ServiceRequest>()
+                .HasOne(sr => sr.User)
+                .WithMany(u => u.ServiceRequests)
+                 .HasForeignKey(sr => sr.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ServiceRequest>()
+                .HasOne(sr => sr.Technician)
+                .WithMany(u => u.HandledServiceRequests)
+                .HasForeignKey(sr => sr.TechnicianId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ServiceRequest>()
+             .Property(x => x.EstimatedCost)
+             .HasPrecision(18, 2);
 
             builder.Entity<Notification>()
                 .HasOne(dt => dt.User)
                 .WithMany(u => u.Notifications)
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<Payment>()
-                .HasOne(p => p.Appointment)
-                .WithMany()
-                .HasForeignKey(p => p.AppointmentId)
-                .OnDelete(DeleteBehavior.Restrict);
-
 
             builder.Entity<DeviceToken>()
                 .HasOne(dt => dt.User)

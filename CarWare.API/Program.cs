@@ -4,8 +4,6 @@ using CarWare.Application.Common.Security;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Mapping;
 using CarWare.Application.Services;
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.Interfaces;
@@ -13,12 +11,15 @@ using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
 using CarWare.Infrastructure.Seed;
 using CarWare.Infrastructure.UnitOfWork;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace CarWare.API
 {
@@ -119,8 +120,8 @@ namespace CarWare.API
             builder.Services.AddScoped<IAppointmentService, AppointmentService>();
             //Profile
             builder.Services.AddScoped<IProfileService, ProfileService>();
-            //History
-            builder.Services.AddScoped<IHistoryService, HistoryService>();
+            //Service Request
+            builder.Services.AddScoped<IServiceRequestService, ServiceRequestService>();
             //Notification
             builder.Services.AddScoped<INotificationService, NotificationService>();
             //payment
@@ -158,6 +159,12 @@ namespace CarWare.API
                                             .AllowCredentials(); //if i want to use cookies/auth
                                   });
             });
+
+            builder.Services.AddControllers()
+             .AddJsonOptions(options =>
+             {
+                  options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+             });
 
             var app = builder.Build();
 
