@@ -17,7 +17,7 @@ namespace CarWare.Infrastructure.UnitOfWork
         private IVehicleRepository _vehicleRepository;
         private IMaintenanceRepository _maintenanceReminderRepository;
         private IAppointmentRepository _appointmentRepository;
-        private IServiceHistoryRepository _serviceHistoryRepository;
+        private IServiceRequestRepository _serviceRequestRepository;
         private INotificationRepository _notificationRepository;
         private IDeviceTokenRepository _deviceTokenRepository;
 
@@ -36,8 +36,8 @@ namespace CarWare.Infrastructure.UnitOfWork
         public IAppointmentRepository AppointmentRepository
             => _appointmentRepository ??= new AppointmentRepository(_dbContext);
 
-        public IServiceHistoryRepository ServiceHistoryRepository
-            => _serviceHistoryRepository ??= new ServiceHistoryRepository(_dbContext);
+        public IServiceRequestRepository ServiceRequestRepository
+            => _serviceRequestRepository ??= new ServiceRequestRepository(_dbContext);
 
         public INotificationRepository NotificationRepository
             => _notificationRepository ??= new NotificationRepository(_dbContext);

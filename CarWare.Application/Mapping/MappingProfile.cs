@@ -58,24 +58,35 @@ namespace CarWare.Application.Mapping
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.ProfileImageUrl, opt => opt.MapFrom(src => src.ProfileImageUrl));
 
-            //History Profile
+            //Service Request Profile
             CreateMap<ServiceRequest, HistoryDetailsDto>()
                 .ForMember(dest => dest.CarName,
-                    opt => opt.MapFrom(src => src.Vehicle.Brand + " " + src.Vehicle.Model))
+                    opt => opt.MapFrom(src =>
+                        src.Vehicle.Brand.Name + " " + src.Vehicle.Model.Name))
+
                 .ForMember(dest => dest.ServiceName,
-                    opt => opt.MapFrom(src => src.ServiceRequestServices
-                        .Select(s => s.MaintenanceType.Name)
-                        .FirstOrDefault()))
+                    opt => opt.MapFrom(src =>
+                        src.ServiceRequestServices
+                .Select(s => s.MaintenanceType.Name)
+                .FirstOrDefault()))
+
                 .ForMember(dest => dest.ProviderName,
-                    opt => opt.MapFrom(src => src.ServiceCenter.Name))
+                      opt => opt.MapFrom(src =>
+                   src.ServiceCenter.Name))
+
                 .ForMember(dest => dest.Date,
-                    opt => opt.MapFrom(src => src.CreatedAt))
+                       opt => opt.MapFrom(src =>
+                   src.CreatedAt))
+
                 .ForMember(dest => dest.PaymentMethod,
-                    opt => opt.MapFrom(src => src.PaymentMethod.ToString()))
+                        opt => opt.MapFrom(src =>
+                   src.PaymentMethod.ToString()))
+
                 .ForMember(dest => dest.ServiceDetails,
-                    opt => opt.MapFrom(src => src.ServiceRequestServices
-                        .Select(s => s.Description)
-                        .FirstOrDefault()));
+                        opt => opt.MapFrom(src =>
+                    src.ServiceRequestServices
+                .Select(s => s.Description)
+                .FirstOrDefault()));
 
             //Notification System
             CreateMap<Notification, NotificationDto>();

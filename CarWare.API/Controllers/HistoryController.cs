@@ -1,32 +1,28 @@
 ﻿using CarWare.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace CarWare.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/history")]
     [ApiController]
     [Authorize]
     public class HistoryController : ControllerBase
     {
-        private readonly IHistoryService _historyService;
+        private readonly IServiceRequestService _service;
 
-        public HistoryController(IHistoryService historyService)
+        public HistoryController(IServiceRequestService service)
         {
-            _historyService = historyService;
+            _service = service;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(
-            int pageNumber = 1,
-            int pageSize = 10)
+        public async Task<IActionResult> GetAll()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var result = await _historyService
-                .GetAllAsync(userId);
+            var result = await _service.GetUserHistoryAsync(userId);
 
             if (!result.Success)
                 return BadRequest(result.Error);
@@ -34,13 +30,12 @@ namespace CarWare.API.Controllers
             return Ok(result.Data);
         }
 
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var result = await _historyService.GetByIdAsync(id, userId);
+            var result = await _service.GetUserHistoryDetailsAsync(id, userId);
 
             if (!result.Success)
                 return NotFound(result.Error);

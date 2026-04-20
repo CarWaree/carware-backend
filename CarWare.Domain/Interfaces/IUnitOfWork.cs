@@ -11,7 +11,7 @@ namespace CarWare.Domain
         IVehicleRepository VehicleRepository { get; }
         IMaintenanceRepository MaintenanceRepository { get; }
         IAppointmentRepository AppointmentRepository { get; }
-        IServiceHistoryRepository ServiceHistoryRepository { get; }
+        IServiceRequestRepository ServiceRequestRepository { get; }
         INotificationRepository NotificationRepository { get; }
         IDeviceTokenRepository DeviceTokenRepository { get; }
         Task<int> CompleteAsync();

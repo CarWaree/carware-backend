@@ -12,6 +12,8 @@ namespace CarWare.Application.DTOs.History
 
         public string ProviderName { get; set; }
 
+        public ServiceRequestStatus Status { get; set; }
+
         public DateTime Date { get; set; }
 
         public decimal TotalPrice { get; set; }

@@ -19,6 +19,11 @@ namespace CarWare.Domain.Entities
         public string PendingEmail { get; set; }
 
         //Navigation Property
+        // Requests as client
+        public ICollection<ServiceRequest> ServiceRequests { get; set; }
+
+        // Requests handled as technician
+        public ICollection<ServiceRequest> HandledServiceRequests { get; set; }
         public ICollection<Vehicle> vehicles { get; set; }
         public ICollection<Appointment> Appointments { get; set; }
         public List<RefreshToken> RefreshTokens { get; set; }
