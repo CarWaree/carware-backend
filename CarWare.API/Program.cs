@@ -153,10 +153,10 @@ namespace CarWare.API
                                   policy =>
                                   {
                                       policy
-                                            .WithOrigins("AllowedOrigins") //your frontend URLs
+                                            .AllowAnyOrigin() //your frontend URLs
                                             .AllowAnyHeader()
-                                            .AllowAnyMethod()
-                                            .AllowCredentials(); //if i want to use cookies/auth
+                                            .AllowAnyMethod();
+                                            //.AllowCredentials(); //if i want to use cookies/auth
                                   });
             });
 

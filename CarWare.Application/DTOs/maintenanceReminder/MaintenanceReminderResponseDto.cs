@@ -6,9 +6,10 @@ namespace CarWare.Application.DTOs.maintenanceReminder
     {
         public int Id { get; set; }
         public DateTime NotificationDate { get; set; }
-        public DateTime NextDueDate { get; set; }
+
         public string TypeName { get; set; }
         public string VehicleName { get; set; }
 
+        public string? Note { get; set; }
     }
 }

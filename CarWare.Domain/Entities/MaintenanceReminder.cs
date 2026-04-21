@@ -7,11 +7,18 @@ namespace CarWare.Domain.Entities
     {
         [Required]
         public DateTime NotificationDate { get; set; }
-        public DateTime NextDueDate { get; set; }
+
+        // Recurrence
+        public int? RepeatInterval { get; set; } 
+        public RepeatUnit? RepeatUnit { get; set; }
+        public int? RepeatCount { get; set; }
+
+        public string? Note { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        //Relations 
+        // Relations
         [Required]
         public int TypeId { get; set; }
         public MaintenanceType Type { get; set; }
