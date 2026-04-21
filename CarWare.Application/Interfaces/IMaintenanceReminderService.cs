@@ -12,7 +12,7 @@ namespace CarWare.Application.Interfaces
         Task<Result<MaintenanceReminderResponseDto>> AddAsync(CreateMaintenanceReminderDto dto, string userId);
         Task<Result<MaintenanceReminderResponseDto>> UpdateAsync(UpdateMaintenanceReminderDto dto, string userId);
         Task<Result<bool>> DeleteAsync(int id, string userId);
-        Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(string userId, int days = 7);
+        Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(string userId);
         Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> GetAllByCarAsync(int vehicleId, string userId);
     }
 }

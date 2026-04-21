@@ -96,16 +96,14 @@ namespace CarWare.Application.Services
             return Result<bool>.Ok(true);
         }
 
-        public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(string userId, int days = 7)
+        public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(string userId)
         {
-            var today = DateTime.UtcNow.Date;
-            var until = today.AddDays(days + 1).AddTicks(-1);
 
             var reminders = await _uow.MaintenanceRepository
-                .GetUpcomingQueryable(days)
-                    .Where(m => m.Vehicle.UserId == userId)
-                    .Include(m => m.Vehicle)
-                    .Include(m => m.Type)
+                    .GetUpcomingQueryable()
+                    .Where(m =>
+                             m.Vehicle.UserId == userId &&
+                             m.NotificationDate >= DateTime.UtcNow)
                     .ToListAsync();
 
             if (!reminders.Any())

@@ -90,15 +90,15 @@ namespace CarWare.API.Controllers
 
         [Authorize]
         [HttpGet("my/upcoming")]
-        public async Task<ActionResult> UpcomingReminders(int days = 7)
+        public async Task<ActionResult> UpcomingReminders()
         {
-            var result = await _reminderService.UpcomingMaintenanceAsync(userId, days);
+            var result = await _reminderService.UpcomingMaintenanceAsync(userId);
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
 
             return Ok(ApiResponseGeneric<List<MaintenanceReminderResponseDto>>.Success(
-                result.Data.ToList(), $"Upcoming maintenance reminders for next {days} days"
+                result.Data.ToList(), $"Upcoming maintenance reminders"
             ));
         }
 
