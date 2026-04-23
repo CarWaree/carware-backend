@@ -50,12 +50,25 @@ namespace CarWare.Infrastructure.Repositories
 
         }
 
-        public IQueryable<MaintenanceReminder> GetUpcomingQueryable()
+        public async Task<List<MaintenanceReminder>> GetUpcomingByUserAsync(string userId)
         {
-            return _dbContext.maintenances
-                    .Include(m => m.Vehicle)
-                    .Include(m => m.Type)
-                    .OrderBy(m => m.NotificationDate);
+            return await _dbContext.maintenances
+                .Include(x => x.Type)
+                .Include(x => x.Vehicle)
+                .Where(x =>
+                    x.Vehicle.UserId == userId &&
+                    x.NotificationDate >= DateTime.UtcNow)
+                .ToListAsync();
+        }
+
+        public async Task<List<MaintenanceReminder>> GetDueRemindersAsync(DateTime now)
+        {
+            return await _dbContext.maintenances
+                .Include(x => x.Vehicle)
+                .Where(x =>
+                    !x.IsNotified &&
+                    x.NotificationDate <= now)
+                .ToListAsync();
         }
     }
 }

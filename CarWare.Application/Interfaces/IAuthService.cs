@@ -12,7 +12,7 @@ namespace CarWare.Application.Interfaces
         Task<Result<LoginResponseDto>> LoginAsync(LoginDto loginDto);
         Task<Result<bool>> RequestResetAsync(ForgetPasswordDto forgetDTO);
         Task<Result<ResetPasswordResultDto?>> VerifyOtpAsync(VerifyOtpDto optDto);
-        Task<Result<bool>> ResendEmailOtpAsync(string Email);
+        Task<Result<bool>> ResendEmailOtpAsync(ResendEmailDto dto);
         Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto resetDto);
         Task<Result<VerifyEmailResponseDto>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto);
         (string RedirectUrl, AuthenticationProperties Props) GetGoogleRedirectUrl(string? returnUrl = null);

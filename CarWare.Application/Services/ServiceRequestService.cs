@@ -1,11 +1,12 @@
 ﻿using CarWare.Application.Common;
 using CarWare.Application.DTOs.History;
+using CarWare.Application.DTOs.Notification;
 using CarWare.Application.DTOs.ServiceRequests;
-using CarWare.Application.helper;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.Enums;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -15,10 +16,12 @@ using System.Threading.Tasks;
 public class ServiceRequestService : IServiceRequestService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IBackgroundJobClient _backgroundJobClient;
 
-    public ServiceRequestService(IUnitOfWork unitOfWork)
+    public ServiceRequestService(IUnitOfWork unitOfWork, IBackgroundJobClient backgroundJobClient)
     {
         _unitOfWork = unitOfWork;
+        _backgroundJobClient = backgroundJobClient;
     }
 
     #region Dashboard
@@ -152,6 +155,15 @@ public class ServiceRequestService : IServiceRequestService
         _unitOfWork.ServiceRequestRepository.Update(request);
         await _unitOfWork.CompleteAsync();
 
+        _backgroundJobClient.Enqueue<NotificationJobs>(job =>
+             job.Send(new SendNotificationDto
+             {
+                 UserId = request.UserId,
+                 Title = "Request Accepted",
+                Body = "Your service request has been accepted",
+                Channel = NotificationChannel.Push
+             }));
+
         var response = new AcceptResponseDto
         {
             Id = request.Id,
@@ -181,6 +193,15 @@ public class ServiceRequestService : IServiceRequestService
 
         _unitOfWork.ServiceRequestRepository.Update(request);
         await _unitOfWork.CompleteAsync();
+
+        _backgroundJobClient.Enqueue<NotificationJobs>(job =>
+            job.Send(new SendNotificationDto
+            {
+                UserId = request.UserId,
+                Title = "Request Rejected",
+                Body = $"Reason: {request.RejectionReason}",
+                Channel = NotificationChannel.Push
+            }));
 
         var response = new RejectResponseDto
         {
@@ -212,6 +233,15 @@ public class ServiceRequestService : IServiceRequestService
 
         _unitOfWork.ServiceRequestRepository.Update(request);
         await _unitOfWork.CompleteAsync();
+
+        _backgroundJobClient.Enqueue<NotificationJobs>(job =>
+            job.Send(new SendNotificationDto
+            {
+                UserId = request.UserId,
+                Title = "Service Completed",
+                Body = "Your service request has been completed successfully",
+                Channel = NotificationChannel.Push
+            }));
 
         var response = new CompleteResponseDto
         {

@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
 using CarWare.Application.Common;
 using CarWare.Application.DTOs.Appointment;
+using CarWare.Application.DTOs.Notification;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.Enums;
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -18,13 +20,17 @@ namespace CarWare.Application.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public AppointmentService
-            (UserManager<ApplicationUser> userManager, IUnitOfWork unitOfWork, IMapper mapper)
+            (UserManager<ApplicationUser> userManager,
+            IUnitOfWork unitOfWork, IMapper mapper,
+            IBackgroundJobClient backgroundJobClient)
         {
             _userManager = userManager;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<Result<List<AppointmentDto>>> GetUserAppointmentsAsync(string userId)
@@ -80,13 +86,24 @@ namespace CarWare.Application.Services
 
             await CreateServiceRequestFromAppointment(appointment);
 
+            //Hnagfire Notification 
+            _backgroundJobClient.Enqueue<NotificationJobs>(job =>
+                job.Send(new SendNotificationDto
+                {
+                    UserId = userId,
+                    Title = "Appointment Created",
+                    Body = "Your appointment was created successfully",
+                    Channel = NotificationChannel.Push
+                }));
+
+
             var createAppointment = await _unitOfWork.AppointmentRepository.GetByIdWithDetailsAsync(appointment.Id);
             var resultDto = _mapper.Map<AppointmentDto>(createAppointment);
 
             return Result<AppointmentDto>.Ok(resultDto);
         }
 
-        #region Helper
+        #region Helper_CreateServiceRequest 
         private async Task CreateServiceRequestFromAppointment(Appointment appointment)
         {
             var exists = await _unitOfWork.ServiceRequestRepository

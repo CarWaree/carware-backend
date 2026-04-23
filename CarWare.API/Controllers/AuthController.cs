@@ -65,9 +65,9 @@ namespace CarWare.API.Controllers
         }
 
         [HttpPost("resend-email-otp")]
-        public async Task<IActionResult> ResendEmailOtpAsync([FromBody] string Email)
+        public async Task<IActionResult> ResendEmailOtpAsync([FromBody] ResendEmailDto dto)
         {
-            var result = await _authService.ResendEmailOtpAsync(Email);
+            var result = await _authService.ResendEmailOtpAsync(dto);
 
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));

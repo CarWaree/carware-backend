@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using CarWare.Application.Common;
+using CarWare.Application.DTOs.Auth;
 using CarWare.Application.DTOs.Profile;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
@@ -78,7 +79,11 @@ namespace CarWare.Application.Services
             {
                 user.PendingEmail = newEmail;
 
-                var otpResult = await _authService.ResendEmailOtpAsync(newEmail);
+                var otpResult = await _authService.ResendEmailOtpAsync(
+                    new ResendEmailDto
+                        {
+                            Email = newEmail
+                        });
                 if (!otpResult.Success)
                     return Result<string>.Fail("Failed to send verification email");
 

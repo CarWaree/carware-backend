@@ -8,6 +8,8 @@ namespace CarWare.Domain.Entities
         [Required]
         public DateTime NotificationDate { get; set; }
 
+        public bool IsNotified { get; set; } = false;
+
         // Recurrence
         public int? RepeatInterval { get; set; } 
         public RepeatUnit? RepeatUnit { get; set; }

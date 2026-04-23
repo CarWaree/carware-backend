@@ -135,7 +135,9 @@ namespace CarWare.API
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
-
+            //Jobs
+            builder.Services.AddScoped<NotificationJobs>();
+            builder.Services.AddScoped<MaintenanceReminderJob>();
             //Firebase
             var firebasePath = Path.Combine(Directory.GetCurrentDirectory(), "Firebase", "firebase-key.json");
 
@@ -179,10 +181,10 @@ namespace CarWare.API
                 var context = services.GetRequiredService<ApplicationDbContext>();
                 var logger = services.GetRequiredService<ILogger<Program>>();
 
-                // ✅ Apply pending migrations
+                //  Apply pending migrations
                 await context.Database.MigrateAsync();
 
-                // ✅ Run vehicle seeder (using your JSON file)
+                //  Run vehicle seeder (using your JSON file)
                 await StoreContextSeed.SeedAsync(context);
 
                 logger.LogInformation("Database migrated & seeded successfully ");
@@ -215,6 +217,11 @@ namespace CarWare.API
             app.UseAuthorization();
 
             app.UseHangfireDashboard("/hangfire");
+            RecurringJob.AddOrUpdate<MaintenanceReminderJob>(
+                "maintenance-reminders",
+                        job => job.Execute(),
+                        "*/5 * * * *"
+            );
 
             app.MapControllers();
 
