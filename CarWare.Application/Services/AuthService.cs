@@ -138,9 +138,9 @@ namespace CarWare.Application.Services
         }
 
         // ─── Resend Email OTP 
-        public async Task<Result<bool>> ResendEmailOtpAsync(string email)
+        public async Task<Result<bool>> ResendEmailOtpAsync(ResendEmailDto dto)
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userManager.FindByEmailAsync(dto.Email);
 
             if (user == null)
                 return Result<bool>.Fail("User not found");

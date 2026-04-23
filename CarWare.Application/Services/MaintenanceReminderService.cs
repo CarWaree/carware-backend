@@ -98,13 +98,8 @@ namespace CarWare.Application.Services
 
         public async Task<Result<IEnumerable<MaintenanceReminderResponseDto>>> UpcomingMaintenanceAsync(string userId)
         {
-
             var reminders = await _uow.MaintenanceRepository
-                    .GetUpcomingQueryable()
-                    .Where(m =>
-                             m.Vehicle.UserId == userId &&
-                             m.NotificationDate >= DateTime.UtcNow)
-                    .ToListAsync();
+                .GetUpcomingByUserAsync(userId);
 
             if (!reminders.Any())
                 return Result<IEnumerable<MaintenanceReminderResponseDto>>
