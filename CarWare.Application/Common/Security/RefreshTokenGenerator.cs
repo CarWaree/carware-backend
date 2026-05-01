@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Security.Cryptography;
 
-public class RefreshTokenGenerator
+public class RefreshTokenGenerator : IRefreshTokenGenerator
 {
     private readonly JWT _jwt;
 

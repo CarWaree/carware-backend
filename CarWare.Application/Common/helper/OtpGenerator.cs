@@ -1,9 +1,8 @@
-﻿using System;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 
 namespace CarWare.Application.Common.helper
 {
-    public class OtpGenerator
+    public class OtpGenerator : IOtpGenerator
     {
         public string Generate()
         {

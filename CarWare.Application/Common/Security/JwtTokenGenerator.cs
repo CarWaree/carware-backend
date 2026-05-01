@@ -10,7 +10,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
-public class JwtTokenGenerator
+public class JwtTokenGenerator : IJwtTokenGenerator
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly JWT _jwt;
