@@ -5,7 +5,7 @@ namespace CarWare.Application.DTOs.Auth
     public class ResetPasswordDto
     {
         [Required]
-        public string AccessToken { get; set; }
+        public string ResetPasswordToken { get; set; }
 
         [Required]
         [DataType(DataType.Password)]

@@ -310,7 +310,7 @@ namespace CarWare.Application.Services
 
             return Result<ResetPasswordResultDto>.Ok(new ResetPasswordResultDto
             {
-                Token = handle
+                ResetPasswordToken = handle
             });
         }
 
@@ -320,11 +320,11 @@ namespace CarWare.Application.Services
             if (resetDto.NewPassword != resetDto.ConfirmPassword)
                 return Result<bool>.Fail("Passwords do not match", "PasswordMismatch");
 
-            if (string.IsNullOrWhiteSpace(resetDto.AccessToken))
+            if (string.IsNullOrWhiteSpace(resetDto.ResetPasswordToken))
                 return Result<bool>.Fail("Token is required", "MissingToken");
 
-            var realResetToken = await _cache.GetStringAsync(CacheKeys.ResetHandle(resetDto.AccessToken));
-            var userId = await _cache.GetStringAsync(CacheKeys.ResetHandleUserId(resetDto.AccessToken));
+            var realResetToken = await _cache.GetStringAsync(CacheKeys.ResetHandle(resetDto.ResetPasswordToken));
+            var userId = await _cache.GetStringAsync(CacheKeys.ResetHandleUserId(resetDto.ResetPasswordToken));
 
             if (realResetToken == null || userId == null)
                 return Result<bool>.Fail("Reset token expired or invalid", "InvalidToken");
@@ -342,8 +342,8 @@ namespace CarWare.Application.Services
                 return Result<bool>.Fail(errors, "ResetFailed");
             }
 
-            await _cache.RemoveAsync(CacheKeys.ResetHandle(resetDto.AccessToken));
-            await _cache.RemoveAsync(CacheKeys.ResetHandleUserId(resetDto.AccessToken));
+            await _cache.RemoveAsync(CacheKeys.ResetHandle(resetDto.ResetPasswordToken));
+            await _cache.RemoveAsync(CacheKeys.ResetHandleUserId(resetDto.ResetPasswordToken));
 
             return Result<bool>.Ok(true);
         }
