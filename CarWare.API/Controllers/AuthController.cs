@@ -43,9 +43,11 @@ namespace CarWare.API.Controllers
             var result = await _authService.RegisterAsync(dto);
 
             if (!result.Success)
-                return BadRequest(ApiResponse.Fail(result.Error));
-            return Ok(ApiResponseGeneric<RegisterResponseDto>
-                .Success(result.Data, "Registration successful. Please verify your email"));
+                return BadRequest(ApiResponse.Fail(result.Error!));
+
+            return StatusCode(201,
+                 ApiResponseGeneric<RegisterResponseDto>
+                    .Success(result.Data, "Registration successful. Please verify your email", 201));
         }
 
         [HttpPost("verify-email-otp")]
@@ -56,11 +58,11 @@ namespace CarWare.API.Controllers
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
 
-            SetRefreshTokenCookie(result.Data.RefreshToken);
+            SetRefreshTokenCookie(result.Data!.RefreshToken);
 
             return Ok(ApiResponseGeneric<VerifyEmailResponseDto>.Success(
                     data: result.Data,
-                    message: "OTP verified successfully"
+                    message: "Email verified successfully"
             ));
         }
 
@@ -72,7 +74,7 @@ namespace CarWare.API.Controllers
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
 
-            return Ok(ApiResponse.Success("A new verification code has been sent to your email."));
+            return Ok(ApiResponse.Success("OTP sent successfully"));
         }
 
         [HttpPost("login")]
@@ -80,11 +82,12 @@ namespace CarWare.API.Controllers
         {
             var result = await _authService.LoginAsync(dto);
             if (!result.Success)
-                return BadRequest(ApiResponse.Fail(result.Error));
+                return BadRequest(ApiResponse.Fail(result.Error!));
 
-            SetRefreshTokenCookie(result.Data.RefreshToken, result.Data.RefreshTokenExpiration);
+            SetRefreshTokenCookie(result.Data!.RefreshToken, result.Data.RefreshTokenExpiration);
 
-            return Ok(ApiResponseGeneric<LoginResponseDto>.Success(result.Data, "Login successful"));
+            return Ok(ApiResponseGeneric<LoginResponseDto>
+                .Success(result.Data, "Login successful"));
         }
 
         [HttpPost("forgot-password")]
@@ -167,9 +170,9 @@ namespace CarWare.API.Controllers
             var result = await _authService.RefreshTokenAsync(dto);
 
             if (!result.Success)
-                return Unauthorized(ApiResponse.Fail(result.Error));
+                return Unauthorized(ApiResponse.Fail(result.Error!));
 
-            SetRefreshTokenCookie(result.Data.RefreshToken);
+            SetRefreshTokenCookie(result.Data!.RefreshToken);
 
             return Ok(ApiResponseGeneric<AuthResponseDto>.Success(
                 result.Data,
@@ -189,7 +192,7 @@ namespace CarWare.API.Controllers
             var result = await _authService.RevokeRefreshTokenAsync(refreshToken);
 
             if (!result.Success)
-                return BadRequest(ApiResponse.Fail(result.Error));
+                return BadRequest(ApiResponse.Fail(result.Error!));
 
             // Delete cookie
             Response.Cookies.Delete("refreshToken");

@@ -127,11 +127,11 @@ namespace CarWare.API
             //payment
             builder.Services.AddScoped<IPaymentService, PaymentService>();
             //Otp Generator
-            builder.Services.AddScoped<OtpGenerator>();
+            builder.Services.AddScoped<IOtpGenerator, OtpGenerator>();
             //JWT Token
-            builder.Services.AddScoped<JwtTokenGenerator>();
+            builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             //Refresh Token
-            builder.Services.AddScoped<RefreshTokenGenerator>();
+            builder.Services.AddScoped<IRefreshTokenGenerator, RefreshTokenGenerator>();
             //autoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);

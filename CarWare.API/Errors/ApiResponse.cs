@@ -11,8 +11,8 @@
             Message = message;
         }
 
-        public static ApiResponse Success(string message = "Success")
-            => new ApiResponse(200, message);
+        public static ApiResponse Success(string message = "Success", int statusCode = 200)
+            => new ApiResponse(statusCode, message);
 
         public static ApiResponse Fail(string message, int statusCode = 400)
             => new ApiResponse(statusCode, message);

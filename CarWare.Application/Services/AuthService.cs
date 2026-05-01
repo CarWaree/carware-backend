@@ -26,12 +26,12 @@ namespace CarWare.Application.Services
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly OtpGenerator _otpGenerator;
+        private readonly IOtpGenerator _otpGenerator;
         private readonly IDistributedCache _cache;
         private readonly IConfiguration _config;
         private readonly IEmailSender _emailSender;
-        private readonly RefreshTokenGenerator _refreshToken;
-        private readonly JwtTokenGenerator _jwtToken;
+        private readonly IRefreshTokenGenerator _refreshToken;
+        private readonly IJwtTokenGenerator _jwtToken;
         private readonly IMapper _mapper;
         private readonly ILogger<AuthService> _logger;
         private const int OtpValidityMinutes = 3;
@@ -40,10 +40,10 @@ namespace CarWare.Application.Services
         public AuthService(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            OtpGenerator otpGenerator,
+            IOtpGenerator otpGenerator,
             IEmailSender emailSender,
-            RefreshTokenGenerator refreshToken,
-            JwtTokenGenerator jwtToken,
+            IRefreshTokenGenerator refreshToken,
+            IJwtTokenGenerator jwtToken,
             IDistributedCache cache,
             IConfiguration config,
             IMapper mapper,
@@ -102,20 +102,20 @@ namespace CarWare.Application.Services
             var user = await _userManager.FindByEmailAsync(dto.Email);
 
             if (user == null || user.EmailConfirmed)
-                return Result<VerifyEmailResponseDto>.Fail("Invalid request");
+                return Result<VerifyEmailResponseDto>.Fail("Invalid request", "InvalidRequest");
 
             var attemptsKey = CacheKeys.EmailVerifyOtpAttempts(user.Id);
             var attempts = await GetAttemptsAsync(attemptsKey);
 
             if (attempts >= MaxOtpAttempts)
-                return Result<VerifyEmailResponseDto>.Fail("OTP locked");
+                return Result<VerifyEmailResponseDto>.Fail("OTP locked", "OtpLocked");
 
             var cachedOtp = await _cache.GetStringAsync(CacheKeys.EmailVerifyOtp(user.Id));
 
-            if (!string.Equals(cachedOtp, dto.Otp, StringComparison.Ordinal))
+            if (cachedOtp != dto.Otp)
             {
                 await OtpAttemptManager.IncrementAsync(_cache, attemptsKey, attempts, OtpValidityMinutes);
-                return Result<VerifyEmailResponseDto>.Fail("Invalid OTP");
+                return Result<VerifyEmailResponseDto>.Fail("Invalid OTP", "InvalidOtp");
             }
 
             await _cache.RemoveAsync(CacheKeys.EmailVerifyOtp(user.Id));
@@ -143,10 +143,10 @@ namespace CarWare.Application.Services
             var user = await _userManager.FindByEmailAsync(dto.Email);
 
             if (user == null)
-                return Result<bool>.Fail("User not found");
+                return Result<bool>.Fail("User not found", "NotFound");
 
             if (user.EmailConfirmed)
-                return Result<bool>.Fail("Email is already verified");
+                return Result<bool>.Fail("Email already verified", "AlreadyVerified");
 
             await SendEmailOtpAsync(user);
 
@@ -160,33 +160,28 @@ namespace CarWare.Application.Services
                 ?? await _userManager.FindByNameAsync(loginDto.EmailOrUsername);
 
             if (user == null)
-                return Result<LoginResponseDto>.Fail("Invalid Username or Password");
+                return Result<LoginResponseDto>.Fail("Invalid credentials", "InvalidLogin");
 
-            var signInResult = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, lockoutOnFailure: true);
+            var signInResult = await _signInManager.CheckPasswordSignInAsync(
+                user, loginDto.Password, true);
 
             if (signInResult.IsLockedOut)
-            {
-                _logger.LogWarning("User {UserId} is locked out", user.Id);
-                return Result<LoginResponseDto>.Fail("Account locked. Try again later.");
-            }
+                return Result<LoginResponseDto>.Fail("Account locked", "LockedOut");
 
             if (!signInResult.Succeeded)
-            {
-                _logger.LogWarning("Invalid login attempt for {Email}", loginDto.EmailOrUsername);
-                return Result<LoginResponseDto>.Fail("Invalid Username or Password");
-            }
+                return Result<LoginResponseDto>.Fail("Invalid credentials", "InvalidLogin");
 
             if (!user.EmailConfirmed)
-                return Result<LoginResponseDto>.Fail("Please verify your email");
+                return Result<LoginResponseDto>.Fail("Please verify email", "EmailNotVerified");
 
             var roles = await _userManager.GetRolesAsync(user);
+
             var refreshToken = _refreshToken.Generate();
             user.RefreshTokens.Add(refreshToken);
+
             await _userManager.UpdateAsync(user);
 
             var jwt = await _jwtToken.CreateToken(user);
-
-            _logger.LogInformation("User {UserId} logged in successfully", user.Id);
 
             return Result<LoginResponseDto>.Ok(new LoginResponseDto
             {
@@ -210,29 +205,21 @@ namespace CarWare.Application.Services
                 .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == dto.RefreshToken));
 
             if (user == null)
-            {
-                _logger.LogWarning("Refresh token not found");
-                return Result<AuthResponseDto>.Fail("Invalid token");
-            }
+                return Result<AuthResponseDto>.Fail("Invalid token", "InvalidToken");
 
             var token = user.RefreshTokens.FirstOrDefault(t => t.Token == dto.RefreshToken);
 
             if (token == null || token.RevokedOn != null || token.ExpiresOn <= DateTime.UtcNow)
-            {
-                _logger.LogWarning("Expired or revoked refresh token used for user {UserId}", user.Id);
-                return Result<AuthResponseDto>.Fail("Token expired");
-            }
+                return Result<AuthResponseDto>.Fail("Expired token", "ExpiredToken");
 
             token.RevokedOn = DateTime.UtcNow;
-            user.RefreshTokens.RemoveAll(t => !t.IsActive);
 
             var newRefreshToken = _refreshToken.Generate();
             user.RefreshTokens.Add(newRefreshToken);
+
             await _userManager.UpdateAsync(user);
 
             var jwt = await _jwtToken.CreateToken(user);
-
-            _logger.LogInformation("Refresh token rotated for user {UserId}", user.Id);
 
             return Result<AuthResponseDto>.Ok(new AuthResponseDto
             {
@@ -252,17 +239,16 @@ namespace CarWare.Application.Services
                 .SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
 
             if (user == null)
-                return Result<bool>.Fail("Invalid token");
+                return Result<bool>.Fail("Invalid token", "InvalidToken");
 
             var token = user.RefreshTokens.FirstOrDefault(t => t.Token == refreshToken);
 
             if (token == null || !token.IsActive)
-                return Result<bool>.Fail("Already revoked");
+                return Result<bool>.Fail("Already revoked", "AlreadyRevoked");
 
             token.RevokedOn = DateTime.UtcNow;
-            await _userManager.UpdateAsync(user);
 
-            _logger.LogInformation("User {UserId} logged out", user.Id);
+            await _userManager.UpdateAsync(user);
 
             return Result<bool>.Ok(true);
         }
@@ -286,20 +272,22 @@ namespace CarWare.Application.Services
         public async Task<Result<ResetPasswordResultDto>> VerifyOtpAsync(VerifyOtpDto optDto)
         {
             var user = await _userManager.FindByEmailAsync(optDto.Email);
+
             if (user == null)
-                return Result<ResetPasswordResultDto>.Fail("Invalid OTP");
+                return Result<ResetPasswordResultDto>.Fail("Invalid OTP", "InvalidOtp");
 
             var attemptsKey = CacheKeys.ResetOtpAttempts(user.Id);
             var attempts = await GetAttemptsAsync(attemptsKey);
 
             if (attempts >= MaxOtpAttempts)
-                return Result<ResetPasswordResultDto>.Fail("OTP locked due to too many attempts");
+                return Result<ResetPasswordResultDto>.Fail("OTP locked due to too many attempts", "OtpLocked");
 
             var cachedOtp = await _cache.GetStringAsync(CacheKeys.ResetOtp(user.Id));
-            if (cachedOtp == null || cachedOtp != optDto.Otp)
+
+            if (string.IsNullOrEmpty(cachedOtp) || cachedOtp != optDto.Otp)
             {
                 await OtpAttemptManager.IncrementAsync(_cache, attemptsKey, attempts, OtpValidityMinutes);
-                return Result<ResetPasswordResultDto>.Fail("Invalid or expired OTP");
+                return Result<ResetPasswordResultDto>.Fail("Invalid or expired OTP", "InvalidOtp");
             }
 
             await _cache.RemoveAsync(CacheKeys.ResetOtp(user.Id));
@@ -309,43 +297,53 @@ namespace CarWare.Application.Services
             var handle = Guid.NewGuid().ToString("N");
 
             await _cache.SetStringAsync(CacheKeys.ResetHandle(handle), resetToken,
-                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) });
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+                });
 
             await _cache.SetStringAsync(CacheKeys.ResetHandleUserId(handle), user.Id,
-                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) });
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+                });
 
-            return Result<ResetPasswordResultDto>.Ok(new ResetPasswordResultDto { Token = handle });
+            return Result<ResetPasswordResultDto>.Ok(new ResetPasswordResultDto
+            {
+                ResetPasswordToken = handle
+            });
         }
 
         // ─── Reset Password
         public async Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto resetDto)
         {
             if (resetDto.NewPassword != resetDto.ConfirmPassword)
-                return Result<bool>.Fail("New Password and Confirmation do not match");
+                return Result<bool>.Fail("Passwords do not match", "PasswordMismatch");
 
-            var handle = resetDto.AccessToken;
-            if (string.IsNullOrWhiteSpace(handle))
-                return Result<bool>.Fail("Token is required.");
+            if (string.IsNullOrWhiteSpace(resetDto.ResetPasswordToken))
+                return Result<bool>.Fail("Token is required", "MissingToken");
 
-            var realResetToken = await _cache.GetStringAsync(CacheKeys.ResetHandle(handle));
-            var userId = await _cache.GetStringAsync(CacheKeys.ResetHandleUserId(handle));
+            var realResetToken = await _cache.GetStringAsync(CacheKeys.ResetHandle(resetDto.ResetPasswordToken));
+            var userId = await _cache.GetStringAsync(CacheKeys.ResetHandleUserId(resetDto.ResetPasswordToken));
 
             if (realResetToken == null || userId == null)
-                return Result<bool>.Fail("The password reset token is invalid or has expired.");
+                return Result<bool>.Fail("Reset token expired or invalid", "InvalidToken");
 
             var user = await _userManager.FindByIdAsync(userId);
+
             if (user == null)
-                return Result<bool>.Fail("User not found.");
+                return Result<bool>.Fail("User not found", "NotFound");
 
             var result = await _userManager.ResetPasswordAsync(user, realResetToken, resetDto.NewPassword);
+
             if (!result.Succeeded)
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                return Result<bool>.Fail(errors);
+                return Result<bool>.Fail(errors, "ResetFailed");
             }
 
-            await _cache.RemoveAsync(CacheKeys.ResetHandle(handle));
-            await _cache.RemoveAsync(CacheKeys.ResetHandleUserId(handle));
+            await _cache.RemoveAsync(CacheKeys.ResetHandle(resetDto.ResetPasswordToken));
+            await _cache.RemoveAsync(CacheKeys.ResetHandleUserId(resetDto.ResetPasswordToken));
 
             return Result<bool>.Ok(true);
         }
@@ -360,14 +358,16 @@ namespace CarWare.Application.Services
             return (redirectUrl, props);
         }
 
-        public async Task<AuthResponseDto> HandleGoogleCallbackAsync(string? returnUrl = null, string? remoteError = null)
+        public async Task<Result<AuthResponseDto>> HandleGoogleCallbackAsync
+            (string? returnUrl = null, string? remoteError = null)
         {
             if (remoteError != null)
-                throw new Exception(remoteError);
+                return Result<AuthResponseDto>.Fail(remoteError, "GoogleAuthError");
 
             var info = await _signInManager.GetExternalLoginInfoAsync();
+
             if (info == null)
-                throw new Exception("Error loading external login info");
+                return Result<AuthResponseDto>.Fail("Error loading external login info", "GoogleAuthError");
 
             var signInResult = await _signInManager
                 .ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, false);
@@ -377,6 +377,7 @@ namespace CarWare.Application.Services
             if (!signInResult.Succeeded)
             {
                 var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+
                 user = await _userManager.FindByEmailAsync(email);
 
                 if (user == null)
@@ -387,6 +388,7 @@ namespace CarWare.Application.Services
                         UserName = UsernameGenerator.Generate(email),
                         EmailConfirmed = true
                     };
+
                     await _userManager.CreateAsync(user);
                     await _userManager.AddToRoleAsync(user, "User");
                 }
@@ -404,47 +406,56 @@ namespace CarWare.Application.Services
 
             var jwt = await _jwtToken.CreateToken(user);
 
-            return new AuthResponseDto
+            return Result<AuthResponseDto>.Ok(new AuthResponseDto
             {
                 AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
                 RefreshToken = refreshToken.Token,
                 IsProfileCompleted = user.IsProfileCompleted
-            };
+            });
         }
 
         // ─── Google Login (Mobile / SPA) 
-        public async Task<AuthResponseDto> GoogleLoginAsync(string idToken)
+        public async Task<Result<AuthResponseDto>> GoogleLoginAsync(string idToken)
         {
-            var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
-            var user = await _userManager.FindByEmailAsync(payload.Email);
-
-            if (user == null)
+            try
             {
-                user = new ApplicationUser
+                var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
+
+                var user = await _userManager.FindByEmailAsync(payload.Email);
+
+                if (user == null)
                 {
-                    Email = payload.Email,
-                    UserName = UsernameGenerator.Generate(payload.Email),
-                    EmailConfirmed = true,
-                    FirstName = payload.Name?.Split(' ')[0] ?? "",
-                    LastName = payload.Name?.Split(' ').Skip(1).FirstOrDefault() ?? "",
-                    GoogleId = payload.Subject
-                };
-                await _userManager.CreateAsync(user);
-                await _userManager.AddToRoleAsync(user, "User");
+                    user = new ApplicationUser
+                    {
+                        Email = payload.Email,
+                        UserName = UsernameGenerator.Generate(payload.Email),
+                        EmailConfirmed = true,
+                        FirstName = payload.Name?.Split(' ')[0] ?? "",
+                        LastName = payload.Name?.Split(' ').Skip(1).FirstOrDefault() ?? "",
+                        GoogleId = payload.Subject
+                    };
+
+                    await _userManager.CreateAsync(user);
+                    await _userManager.AddToRoleAsync(user, "User");
+                }
+
+                var refreshToken = _refreshToken.Generate();
+                user.RefreshTokens.Add(refreshToken);
+                await _userManager.UpdateAsync(user);
+
+                var jwt = await _jwtToken.CreateToken(user);
+
+                return Result<AuthResponseDto>.Ok(new AuthResponseDto
+                {
+                    AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
+                    RefreshToken = refreshToken.Token,
+                    IsProfileCompleted = user.IsProfileCompleted
+                });
             }
-
-            var refreshToken = _refreshToken.Generate();
-            user.RefreshTokens.Add(refreshToken);
-            await _userManager.UpdateAsync(user);
-
-            var jwt = await _jwtToken.CreateToken(user);
-
-            return new AuthResponseDto
+            catch (Exception ex)
             {
-                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
-                RefreshToken = refreshToken.Token,
-                IsProfileCompleted = user.IsProfileCompleted
-            };
+                return Result<AuthResponseDto>.Fail(ex.Message, "GoogleAuthError");
+            }
         }
 
         // ─── Private Helpers 
