@@ -48,7 +48,7 @@ namespace CarWare.Application.Services
             if (dto == null)
                 return Result<AppointmentDto>.Fail("Appointment data is required");
 
-            if (dto.Date < DateTime.UtcNow)
+            if (dto.Date <= DateTime.UtcNow)
                 return Result<AppointmentDto>.Fail("Appointment data cannot be in the past");
 
             //vehicle owner
@@ -128,11 +128,11 @@ namespace CarWare.Application.Services
 
                 ServiceRequestServices = new List<ServiceRequestItem>
                 {
-                new ServiceRequestItem
-                {
-                    MaintenanceTypeId = appointment.ServiceId,
-                    Description = appointment.Service?.Name
-                }
+                    new ServiceRequestItem
+                    {
+                        MaintenanceTypeId = appointment.ServiceId,
+                        Description = appointment.Service?.Name
+                    }
                 }
             };
 

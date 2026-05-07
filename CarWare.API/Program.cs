@@ -108,6 +108,9 @@ namespace CarWare.API
 
             //Role
             builder.Services.AddScoped<IRoleService, RoleService>();
+
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             //vehicleservice
             builder.Services.AddScoped<IVehicleService, VehicleService>();
             //maintenancetypeservice
@@ -228,13 +231,13 @@ namespace CarWare.API
             app.Run();
         }
 
-        //Helper method to seed roles
+        //Helper For Seeding Roles
         private static async Task CreateRolesAsync(IApplicationBuilder app)
         {
             using var scope = app.ApplicationServices.CreateScope();
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            string[] roles = { "ADMIN", "USER" };
+            string[] roles = { "SUPERADMIN", "CENTERADMIN", "USER" };
 
             foreach (var role in roles)
             {

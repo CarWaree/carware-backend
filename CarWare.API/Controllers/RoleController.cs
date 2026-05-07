@@ -9,7 +9,7 @@ namespace CarWare.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "SUPERADMIN")]
     public class RoleController : ControllerBase
     {
         private readonly IRoleService _roleService;

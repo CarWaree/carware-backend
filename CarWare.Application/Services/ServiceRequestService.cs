@@ -17,27 +17,46 @@ public class ServiceRequestService : IServiceRequestService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IBackgroundJobClient _backgroundJobClient;
+    private readonly ICurrentUserService _currentUserService;
 
-    public ServiceRequestService(IUnitOfWork unitOfWork, IBackgroundJobClient backgroundJobClient)
+    public ServiceRequestService(IUnitOfWork unitOfWork,
+        IBackgroundJobClient backgroundJobClient, ICurrentUserService currentUserService)
     {
         _unitOfWork = unitOfWork;
         _backgroundJobClient = backgroundJobClient;
+        _currentUserService = currentUserService;
     }
+
+    private int CenterId => _currentUserService.ServiceCenterId ?? throw new Exception("ServiceCenterId not found");
 
     #region Dashboard
     public async Task<Result<ServiceRequestListResponse>> GetDashboardRequestsAsync
         (ServiceRequestQueryParams queryParams)
     {
         var query = _unitOfWork.ServiceRequestRepository
-            .GetAllQueryable()
+            .GetByCenterId(CenterId)
             .OrderByDescending(x => x.CreatedAt);
 
         // ── Counts ──
+        var groupedCounts = await query
+            .GroupBy(x => x.ServiceStatus)
+            .Select(g => new
+            {
+                Status = g.Key,
+                Count = g.Count()
+            })
+            .ToListAsync();
+
         var counts = new CountsDto
         {
-            Pending = await query.CountAsync(x => x.ServiceStatus == ServiceRequestStatus.Pending),
-            Active = await query.CountAsync(x => x.ServiceStatus == ServiceRequestStatus.Accepted),
-            Completed = await query.CountAsync(x => x.ServiceStatus == ServiceRequestStatus.Completed)
+            Pending = groupedCounts
+                .FirstOrDefault(x => x.Status == ServiceRequestStatus.Pending)?.Count ?? 0,
+
+            Active = groupedCounts
+                .FirstOrDefault(x => x.Status == ServiceRequestStatus.Accepted)?.Count ?? 0,
+
+            Completed = groupedCounts
+                .FirstOrDefault(x => x.Status == ServiceRequestStatus.Completed)?.Count ?? 0
         };
 
         // ── Filter ──
@@ -78,7 +97,7 @@ public class ServiceRequestService : IServiceRequestService
                 },
                 Client = new ClientDto
                 {
-                    Id = x.TechnicianId,
+                    Id = x.Id,
                     Name = x.User.FullName
                 }
             })
@@ -93,11 +112,11 @@ public class ServiceRequestService : IServiceRequestService
 
         return Result<ServiceRequestListResponse>.Ok(result);
     }
+
     public async Task<Result<ServiceRequestDto>> GetRequestDetailsAsync(int id)
     {
         var entity = await _unitOfWork.ServiceRequestRepository
-            .GetAllQueryable()
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .GetByIdAsync(id, CenterId);
 
         if (entity == null)
             return Result<ServiceRequestDto>.Fail("Service Request not found");
@@ -120,7 +139,7 @@ public class ServiceRequestService : IServiceRequestService
 
             Client = new ClientDto
             {
-                Id = entity.TechnicianId,
+                Id = entity.Id,
                 Name = entity.User.FullName
             }
         };
@@ -132,7 +151,12 @@ public class ServiceRequestService : IServiceRequestService
     #region Work Flow Actions 
     public async Task<Result<AcceptResponseDto>> AcceptAsync(int id, AcceptServiceRequestDto dto)
     {
-        var request = await _unitOfWork.ServiceRequestRepository.GetByIdAsync(id);
+        var request = await _unitOfWork.ServiceRequestRepository
+                .GetAllQueryable()
+                .FirstOrDefaultAsync(x =>
+                        x.Id == id &&
+                        x.ServiceCenterId == CenterId
+                );
 
         if (request == null)
             return Result<AcceptResponseDto>.Fail("Service Request not found");
@@ -176,7 +200,12 @@ public class ServiceRequestService : IServiceRequestService
 
     public async Task<Result<RejectResponseDto>> RejectAsync(int id, RejectServiceRequestDto dto)
     {
-        var request = await _unitOfWork.ServiceRequestRepository.GetByIdAsync(id);
+        var request = await _unitOfWork.ServiceRequestRepository
+                .GetAllQueryable()
+                .FirstOrDefaultAsync(x =>
+                        x.Id == id &&
+                        x.ServiceCenterId == CenterId
+                );
 
         if (request == null)
             return Result<RejectResponseDto>.Fail("Service Request not found");
@@ -215,7 +244,12 @@ public class ServiceRequestService : IServiceRequestService
 
     public async Task<Result<CompleteResponseDto>> CompleteAsync(int id, CompleteServiceRequestDto dto)
     {
-        var request = await _unitOfWork.ServiceRequestRepository.GetByIdAsync(id);
+        var request = await _unitOfWork.ServiceRequestRepository
+                .GetAllQueryable()
+                .FirstOrDefaultAsync(x =>
+                        x.Id == id &&
+                        x.ServiceCenterId == CenterId
+                );
 
         if (request == null)
             return Result<CompleteResponseDto>.Fail("Service Request not found");

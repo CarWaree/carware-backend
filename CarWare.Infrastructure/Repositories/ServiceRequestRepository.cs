@@ -27,10 +27,30 @@ namespace CarWare.Infrastructure.Repositories
                     .ThenInclude(s => s.MaintenanceType);
         }
 
-        public async Task<ServiceRequest> GetByIdAsync(int id)
+        public IQueryable<ServiceRequest> GetByCenterId(int centerId)
+        {
+            return _context.ServiceRequest
+                .Where(x => x.ServiceCenterId == centerId)
+                .Include(x => x.User)
+                .Include(x => x.Vehicle)
+                .Include(x => x.ServiceCenter)
+                .Include(x => x.Appointment)
+                .Include(x => x.ServiceRequestServices)
+                    .ThenInclude(s => s.MaintenanceType);
+        }
+
+        public async Task<ServiceRequest> GetByIdAsync(int id, int centerId)
         {
             return await _context.ServiceRequest
-                .FirstOrDefaultAsync(x => x.Id == id);
+                .Include(x => x.User)
+                .Include(x => x.Vehicle)
+                .Include(x => x.ServiceCenter)
+                .Include(x => x.Appointment)
+                .Include(x => x.ServiceRequestServices)
+                .ThenInclude(x => x.MaintenanceType)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == id &&
+                    x.ServiceCenterId == centerId);
         }
 
         public IQueryable<ServiceRequest> GetUserHistory(string userId)

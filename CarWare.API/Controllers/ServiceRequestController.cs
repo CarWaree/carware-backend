@@ -1,6 +1,5 @@
 ﻿using CarWare.API.Errors;
 using CarWare.API.Errors.NonGeneric;
-using CarWare.Application.Common;
 using CarWare.Application.DTOs.ServiceRequests;
 using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
@@ -11,7 +10,7 @@ namespace CarWare.API.Controllers
 {
     [Route("api/service-requests")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "CENTERADMIN")]
     public class ServiceRequestController : ControllerBase
     {
         private readonly IServiceRequestService _service;
