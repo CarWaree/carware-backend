@@ -11,6 +11,8 @@ namespace CarWare.Domain.Entities
         [Phone]
         public string Phone { get; set; }
 
+        public ICollection<ApplicationUser> Admins { get; set; } = new List<ApplicationUser>();
+
         public ICollection<ProviderServices> ProviderServices { get; set; } = new List<ProviderServices>();
 
         public ICollection<Appointment> Appointments { get; set; }

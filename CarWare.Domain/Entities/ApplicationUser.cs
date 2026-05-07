@@ -18,6 +18,10 @@ namespace CarWare.Domain.Entities
         public string ProfileImageUrl { get; set; }
         public string PendingEmail { get; set; }
 
+        // Admin Service Center 
+        public int? ServiceCenterId { get; set; }
+        public ServiceCenter ServiceCenter { get; set; }
+
         //Navigation Property
         // Requests as client
         public ICollection<ServiceRequest> ServiceRequests { get; set; }

@@ -4,6 +4,7 @@ using CarWare.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CarWare.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260503110834_AddServiceCenterAdminRelation")]
+    partial class AddServiceCenterAdminRelation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,7 +39,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("brands", (string)null);
+                    b.ToTable("brands");
                 });
 
             modelBuilder.Entity("CarWare.Domain.Entities.ApplicationUser", b =>
@@ -175,7 +178,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("Appointments", (string)null);
+                    b.ToTable("Appointments");
                 });
 
             modelBuilder.Entity("CarWare.Domain.Entities.DeviceToken", b =>
@@ -208,7 +211,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("DeviceTokens", (string)null);
+                    b.ToTable("DeviceTokens");
                 });
 
             modelBuilder.Entity("CarWare.Domain.Entities.MaintenanceReminder", b =>
@@ -255,7 +258,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("maintenances", (string)null);
+                    b.ToTable("maintenances");
                 });
 
             modelBuilder.Entity("CarWare.Domain.Entities.MaintenanceType", b =>
@@ -272,7 +275,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("maintenanceTypes", (string)null);
+                    b.ToTable("maintenanceTypes");
 
                     b.HasData(
                         new
@@ -440,7 +443,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("ProviderServices", (string)null);
+                    b.ToTable("ProviderServices");
                 });
 
             modelBuilder.Entity("CarWare.Domain.Entities.ServiceCenter", b =>
@@ -463,7 +466,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ServiceCenters", (string)null);
+                    b.ToTable("ServiceCenters");
 
                     b.HasData(
                         new
@@ -579,7 +582,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("ServiceRequest", (string)null);
+                    b.ToTable("ServiceRequest");
                 });
 
             modelBuilder.Entity("CarWare.Domain.Entities.ServiceRequestItem", b =>
@@ -597,7 +600,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasIndex("MaintenanceTypeId");
 
-                    b.ToTable("ServiceRequestItem", (string)null);
+                    b.ToTable("ServiceRequestItem");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -752,7 +755,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasIndex("BrandId");
 
-                    b.ToTable("models", (string)null);
+                    b.ToTable("models");
                 });
 
             modelBuilder.Entity("Vehicle", b =>
@@ -790,7 +793,7 @@ namespace CarWare.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("vehicles", (string)null);
+                    b.ToTable("vehicles");
                 });
 
             modelBuilder.Entity("CarWare.Domain.Entities.ApplicationUser", b =>
@@ -799,7 +802,7 @@ namespace CarWare.Infrastructure.Migrations
                         .WithMany("Admins")
                         .HasForeignKey("ServiceCenterId");
 
-                    b.OwnsMany("CarWare.Domain.Entities.ApplicationUser.RefreshTokens#CarWare.Domain.Entities.RefreshToken", "RefreshTokens", b1 =>
+                    b.OwnsMany("CarWare.Domain.Entities.RefreshToken", "RefreshTokens", b1 =>
                         {
                             b1.Property<string>("ApplicationUserId")
                                 .HasColumnType("nvarchar(450)");
@@ -824,7 +827,7 @@ namespace CarWare.Infrastructure.Migrations
 
                             b1.HasKey("ApplicationUserId", "Id");
 
-                            b1.ToTable("RefreshToken", (string)null);
+                            b1.ToTable("RefreshToken");
 
                             b1.WithOwner()
                                 .HasForeignKey("ApplicationUserId");

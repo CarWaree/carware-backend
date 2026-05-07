@@ -17,6 +17,7 @@ namespace CarWare.Infrastructure.Repositories
             _dbContext = dbContext;
         }
 
+        // User 
         public async Task<List<Appointment>> GetUserAppointmentsAsync(string userId)
         {
             return await _dbContext.Appointments
@@ -29,6 +30,34 @@ namespace CarWare.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        // Center Admin
+        public async Task<List<Appointment>> GetCenterAppointmentsAsync(int centerId)
+        {
+            return await _dbContext.Appointments
+                .Where(a => a.ServiceCenterId == centerId)
+                .Include(a => a.user)
+                .Include(a => a.Vehicle)
+                .Include(a => a.Service)
+                .OrderBy(a => a.Date)
+                .ThenBy(a => a.TimeSlot)
+                .ToListAsync();
+        }
+
+        public async Task<Appointment?> GetByIdForCenterAsync(
+            int id,
+            int centerId)
+        {
+            return await _dbContext.Appointments
+                .Include(a => a.user)
+                .Include(a => a.Vehicle)
+                .Include(a => a.Service)
+                .Include(a => a.ServiceCenter)
+                .FirstOrDefaultAsync(a =>
+                    a.Id == id &&
+                    a.ServiceCenterId == centerId);
+        }
+
+        // Shared 
         public async Task<Appointment?> GetByIdWithDetailsAsync(int id)
         {
             return await _dbContext.Appointments

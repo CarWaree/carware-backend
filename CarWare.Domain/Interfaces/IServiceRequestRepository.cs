@@ -7,9 +7,9 @@ namespace CarWare.Domain.Interfaces
     public interface IServiceRequestRepository : IGenericRepository<ServiceRequest>
     {
         IQueryable<ServiceRequest> GetAllQueryable();
-        Task<ServiceRequest> GetByIdAsync(int id);
+        Task<ServiceRequest> GetByIdAsync(int id, int centerId);
         IQueryable<ServiceRequest> GetUserHistory(string userId);
-
+        IQueryable<ServiceRequest> GetByCenterId(int centerId);
         //IQueryable<ServiceRequest> GetCenterHistory(string userId);
     }
 }
