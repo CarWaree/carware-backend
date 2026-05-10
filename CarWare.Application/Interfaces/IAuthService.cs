@@ -14,6 +14,7 @@ namespace CarWare.Application.Interfaces
         Task<Result<ResetPasswordResultDto?>> VerifyOtpAsync(VerifyOtpDto optDto);
         Task<Result<bool>> ResendEmailOtpAsync(ResendEmailDto dto);
         Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto resetDto);
+        Task<Result<bool>> ResendResetOtpAsync(string email);
         Task<Result<VerifyEmailResponseDto>> VerifyEmailOtpAsync(VerifyEmailOtpDto dto);
         (string RedirectUrl, AuthenticationProperties Props) GetGoogleRedirectUrl(string? returnUrl = null);
         Task<Result<AuthResponseDto>> HandleGoogleCallbackAsync

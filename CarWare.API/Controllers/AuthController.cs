@@ -96,9 +96,20 @@ namespace CarWare.API.Controllers
             if (string.IsNullOrWhiteSpace(dto.Email))
                 return BadRequest(ApiResponse.Fail("Email is required."));
 
-            var result = await _authService.RequestResetAsync(dto);
+            await _authService.RequestResetAsync(dto);
 
             return Ok(ApiResponse.Success("Check your email for the verification code"));
+        }
+
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpDto dto)
+        {
+            var result = await _authService.ResendResetOtpAsync(dto.Email);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error!));
+
+            return Ok(ApiResponse.Success("OTP resent successfully"));
         }
 
         [HttpPost("Verify-Otp")]

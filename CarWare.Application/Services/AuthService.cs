@@ -268,6 +268,32 @@ namespace CarWare.Application.Services
             return Result<bool>.Ok(true);
         }
 
+        // Resend OTP
+        public async Task<Result<bool>> ResendResetOtpAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+                return Result<bool>.Ok(true);
+
+            var cooldownKey = $"reset_otp_cooldown:{user.Id}";
+            var exists = await _cache.GetStringAsync(cooldownKey);
+
+            if (exists != null)
+                return Result<bool>.Fail("Try again after 60 seconds");
+
+            await _cache.SetStringAsync(
+                cooldownKey,
+                "1",
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
+                });
+
+            await SendResetOtpAsync(user, email);
+
+            return Result<bool>.Ok(true);
+        }
         // ─── Verify Reset OTP 
         public async Task<Result<ResetPasswordResultDto>> VerifyOtpAsync(VerifyOtpDto optDto)
         {

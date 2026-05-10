@@ -3,15 +3,15 @@
     public static class CacheKeys
     {
         // Email Verification
-        public static string EmailVerifyOtp(string otp)
-            => $"email_verify_otp:{otp}";
+        public static string EmailVerifyOtp(string userId)
+            => $"email_verify_otp:{userId}";
 
         public static string EmailVerifyOtpAttempts(string userId)
             => $"email_verify_otp_attempts:{userId}";
 
         // Password Reset OTP
-        public static string ResetOtp(string otp)
-            => $"reset_otp:{otp}";
+        public static string ResetOtp(string userId)
+        => $"reset_otp:{userId}";
 
         public static string ResetOtpAttempts(string userId)
             => $"reset_otp_attempts:{userId}";

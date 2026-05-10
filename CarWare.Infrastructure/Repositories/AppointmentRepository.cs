@@ -21,6 +21,7 @@ namespace CarWare.Infrastructure.Repositories
         public async Task<List<Appointment>> GetUserAppointmentsAsync(string userId)
         {
             return await _dbContext.Appointments
+                .AsNoTracking()
                 .Where(u => u.UserId == userId)
                 .Include(v => v.Vehicle)
                 .Include(sc => sc.ServiceCenter)
