@@ -1,7 +1,6 @@
 ﻿using CarWare.Domain.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
@@ -16,7 +15,5 @@ namespace CarWare.Domain.Interfaces
         Task AddAsync(T entity);
         void Update(T entity);
         void Delete(T entity);
-        IQueryable<T> Query();
-
     }
 }

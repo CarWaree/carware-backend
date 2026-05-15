@@ -1,6 +1,7 @@
 ﻿using CarWare.Domain.Entities;
 using CarWare.Domain.Interfaces;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CarWare.Domain
@@ -14,6 +15,6 @@ namespace CarWare.Domain
         IServiceRequestRepository ServiceRequestRepository { get; }
         INotificationRepository NotificationRepository { get; }
         IDeviceTokenRepository DeviceTokenRepository { get; }
-        Task<int> CompleteAsync();
+        Task<int> CompleteAsync(CancellationToken cancellationToken = default);
     }
 }

@@ -49,9 +49,10 @@ namespace CarWare.API
             //Identity
             builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
-                options.Password.RequiredLength = 4;
-                options.Password.RequireDigit = false;
-                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequiredLength = 12;
+                options.Password.RequireDigit = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequireUppercase = true;
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
@@ -127,8 +128,6 @@ namespace CarWare.API
             builder.Services.AddScoped<IServiceRequestService, ServiceRequestService>();
             //Notification
             builder.Services.AddScoped<INotificationService, NotificationService>();
-            //payment
-            builder.Services.AddScoped<IPaymentService, PaymentService>();
             //Otp Generator
             builder.Services.AddScoped<IOtpGenerator, OtpGenerator>();
             //JWT Token
@@ -158,10 +157,10 @@ namespace CarWare.API
                                   policy =>
                                   {
                                       policy
-                                            .AllowAnyOrigin() //your frontend URLs
+                                            .WithOrigins() 
                                             .AllowAnyHeader()
-                                            .AllowAnyMethod();
-                                            //.AllowCredentials(); //if i want to use cookies/auth
+                                            .AllowAnyMethod()
+                                            .AllowCredentials();
                                   });
             });
 

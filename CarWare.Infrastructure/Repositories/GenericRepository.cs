@@ -27,7 +27,7 @@ namespace CarWare.Infrastructure.Repositories
 
         public void Update(T entity)
         {
-            _dbSet.Update(entity);
+            _context.Entry(entity).State = EntityState.Modified;
         }
 
         public void Delete(T entity)
@@ -38,13 +38,13 @@ namespace CarWare.Infrastructure.Repositories
         //Withoud Filter
         public async Task<IEnumerable<T>> GetAllAsync()
         {
-            return await _dbSet.ToListAsync();
+            return await _dbSet.AsNoTracking().ToListAsync();
         }
 
         //With Filter
         public async Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.Where(predicate).ToListAsync();
+            return await _dbSet.AsNoTracking().Where(predicate).ToListAsync();
         }
 
         public async Task<T> GetByIdAsync(int Id)
@@ -52,14 +52,9 @@ namespace CarWare.Infrastructure.Repositories
             return await _dbSet.FindAsync(Id);
         }
 
-        public IQueryable<T> Query()
-        {
-            return _context.Set<T>().AsQueryable();
-        }
-
         public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.Where(predicate).ToListAsync();
+            return await _dbSet.AsNoTracking().Where(predicate).ToListAsync();
         }
 
         public async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate)

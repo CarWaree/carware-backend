@@ -15,7 +15,7 @@ namespace CarWare.Infrastructure.Context
         public DbSet<Brand> brands { get; set; }
         public DbSet<Model> models { get; set; }
         public DbSet<MaintenanceReminder> maintenances { get; set; }
-        public DbSet<MaintenanceType> maintenanceTypes { get; set; }
+        public DbSet<MaintenanceType> MaintenanceTypes { get; set; }
         public DbSet<ServiceCenter> ServiceCenters { get; set; }
         public DbSet<ProviderServices> ProviderServices { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
