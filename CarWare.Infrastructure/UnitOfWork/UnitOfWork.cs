@@ -4,6 +4,7 @@ using CarWare.Domain.Interfaces;
 using CarWare.Infrastructure.Context;
 using CarWare.Infrastructure.Repositories;
 using System.Collections;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CarWare.Infrastructure.UnitOfWork
@@ -44,8 +45,11 @@ namespace CarWare.Infrastructure.UnitOfWork
         public IDeviceTokenRepository DeviceTokenRepository
             => _deviceTokenRepository ??= new DeviceTokenRepository(_dbContext);
 
-        public async Task<int> CompleteAsync()
-            => await _dbContext.SaveChangesAsync();
+        public async Task<int> CompleteAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.SaveChangesAsync(cancellationToken);
+        }
 
         public async ValueTask DisposeAsync()
             => await _dbContext.DisposeAsync();

@@ -72,7 +72,7 @@ public class ServiceRequestService : IServiceRequestService
         {
             var s = queryParams.Search.ToLower();
             query = (IOrderedQueryable<ServiceRequest>)query
-                .Where(x => x.User.FullName.ToLower().Contains(s) ||
+                .Where(x => EF.Functions.Like(x.User.FullName, $"%{s}%") ||
                             x.Vehicle.Brand.Name.ToLower().Contains(s));
         }
 

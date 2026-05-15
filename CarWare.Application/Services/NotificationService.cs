@@ -1,17 +1,15 @@
 ﻿using AutoMapper;
-using CarWare.Application.Common;
 using CarWare.Application.Common.helper;
 using CarWare.Application.DTOs.Notification;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CarWare.Application.Services
@@ -21,94 +19,153 @@ namespace CarWare.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IFcmService _fcmService;
-        private readonly ILogger<Notification> _log;
+        private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper
-            ,IFcmService fcmService, ILogger<Notification> log)
+        public NotificationService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            IFcmService fcmService,
+            ILogger<NotificationService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _fcmService = fcmService;
-            _log = log;
+            _logger = logger;
         }
 
-        public async Task SendAsync(SendNotificationDto dto)
+        public async Task SendAsync(
+            SendNotificationDto dto,
+            CancellationToken cancellationToken = default)
         {
             var entity = _mapper.Map<Notification>(dto);
+
             entity.CreatedAt = DateTime.UtcNow;
             entity.IsSent = false;
 
-            await _unitOfWork.NotificationRepository.AddAsync(entity);
-            await _unitOfWork.CompleteAsync();
+            await _unitOfWork.NotificationRepository
+                .AddAsync(entity);
 
-            _log.LogInformation("Sending {Channel} notification {Id} to user {UserId}",
-                dto.Channel, entity.Id, dto.UserId);
+            await _unitOfWork.CompleteAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Sending {Channel} notification {NotificationId} to user {UserId}",
+                dto.Channel,
+                entity.Id,
+                dto.UserId);
 
             try
             {
                 if (dto.Channel == NotificationChannel.Push)
                 {
                     var tokenList = await _unitOfWork.DeviceTokenRepository
-                            .GetActiveTokensByUserIdAsync(entity.UserId);
+                        .GetActiveTokensByUserIdAsync(entity.UserId);
 
                     if (tokenList.Any())
-                        await _fcmService.SendMulticastAsync(tokenList, entity.Title, entity.Body, dto.Data);
+                    {
+                        await _fcmService.SendMulticastAsync(
+                            tokenList,
+                            entity.Title,
+                            entity.Body,
+                            dto.Data);
+                    }
                     else
-                        _log.LogWarning("No active tokens found for user {UserId}", entity.UserId);
+                    {
+                        _logger.LogWarning(
+                            "No active tokens found for user {UserId}",
+                            entity.UserId);
+                    }
                 }
 
                 entity.IsSent = true;
                 entity.SentAt = DateTime.UtcNow;
-                _unitOfWork.NotificationRepository.Update(entity);
-                await _unitOfWork.CompleteAsync();
 
-                _log.LogInformation("Notification {Id} delivered successfully", entity.Id);
+                _unitOfWork.NotificationRepository.Update(entity);
+
+                await _unitOfWork.CompleteAsync(cancellationToken);
+
+                _logger.LogInformation(
+                    "Notification {NotificationId} delivered successfully",
+                    entity.Id);
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Failed to send notification {Id}", entity.Id);
+                _logger.LogError(
+                    ex,
+                    "Failed to send notification {NotificationId}",
+                    entity.Id);
+
                 throw;
             }
         }
 
-        public async Task SendMultipleAsync(List<string> userIds, string title,
-            string body, NotificationChannel channel)
+        public async Task SendMultipleAsync(
+            List<string> userIds,
+            string title,
+            string body,
+            NotificationChannel channel,
+            CancellationToken cancellationToken = default)
         {
             if (userIds == null || !userIds.Any())
             {
-                _log.LogWarning("SendMultipleAsync called with empty userIds list");
+                _logger.LogWarning(
+                    "SendMultipleAsync called with empty userIds list");
+
                 return;
             }
 
-            var tasks = userIds.Select(userId => SendAsync(new SendNotificationDto
-            {
-                UserId = userId,
-                Title = title,
-                Body = body,
-                Channel = channel
-            }));
+            const int batchSize = 100;
 
-            await Task.WhenAll(tasks);
+            foreach (var batch in userIds.Chunk(batchSize))
+            {
+                var tasks = batch.Select(userId =>
+                    SendAsync(
+                        new SendNotificationDto
+                        {
+                            UserId = userId,
+                            Title = title,
+                            Body = body,
+                            Channel = channel
+                        },
+                        cancellationToken));
+
+                await Task.WhenAll(tasks);
+            }
         }
 
-        public async Task BroadcastAsync(string title, string body, NotificationChannel channel)
+        public async Task BroadcastAsync(
+            string title,
+            string body,
+            NotificationChannel channel,
+            CancellationToken cancellationToken = default)
         {
             var userIds = await _unitOfWork.DeviceTokenRepository
                 .GetAllActiveUserIdsAsync();
 
-            _log.LogWarning("Broadcasting to {Count} users via {Channel}", userIds.Count, channel);
+            _logger.LogInformation(
+                "Broadcasting notification to {Count} users via {Channel}",
+                userIds.Count,
+                channel);
 
-            await SendMultipleAsync(userIds, title, body, channel);
+            await SendMultipleAsync(
+                userIds,
+                title,
+                body,
+                channel,
+                cancellationToken);
         }
 
-        public async Task RegisterTokenAsync(string userId, string token, DevicePlatform platform)
+        public async Task RegisterTokenAsync(
+            string userId,
+            string token,
+            DevicePlatform platform,
+            CancellationToken cancellationToken = default)
         {
             var existing = await _unitOfWork.DeviceTokenRepository
                 .GetByTokenAsync(token);
 
             if (existing == null)
             {
-                await _unitOfWork.DeviceTokenRepository.AddAsync(new DeviceToken
+                var deviceToken = new DeviceToken
                 {
                     UserId = userId,
                     Token = token,
@@ -116,63 +173,82 @@ namespace CarWare.Application.Services
                     IsActive = true,
                     RegisteredAt = DateTime.UtcNow,
                     LastUsedAt = DateTime.UtcNow
-                });
+                };
+
+                await _unitOfWork.DeviceTokenRepository
+                    .AddAsync(deviceToken);
             }
             else
             {
                 existing.IsActive = true;
                 existing.UserId = userId;
                 existing.LastUsedAt = DateTime.UtcNow;
-                _unitOfWork.DeviceTokenRepository.Update(existing);
+
+                _unitOfWork.DeviceTokenRepository
+                    .Update(existing);
             }
 
-            await _unitOfWork.CompleteAsync();
+            await _unitOfWork.CompleteAsync(cancellationToken);
         }
 
-        public async Task RemoveTokenAsync(string token)
+        public async Task RemoveTokenAsync(
+            string token,
+            CancellationToken cancellationToken = default)
         {
             var existing = await _unitOfWork.DeviceTokenRepository
                 .GetByTokenAsync(token);
 
             if (existing == null)
             {
-                _log.LogWarning("RemoveToken: token not found");
+                _logger.LogWarning(
+                    "RemoveTokenAsync: token not found");
+
                 return;
             }
 
             existing.IsActive = false;
-            _unitOfWork.DeviceTokenRepository.Update(existing);
-            await _unitOfWork.CompleteAsync();
+
+            _unitOfWork.DeviceTokenRepository
+                .Update(existing);
+
+            await _unitOfWork.CompleteAsync(cancellationToken);
         }
 
-        public async Task<NotificationDetailsDto> GetByIdAsync(int id, string userId)
+        public async Task<NotificationDetailsDto> GetByIdAsync(
+            int id,
+            string userId,
+            CancellationToken cancellationToken = default)
         {
-            var repo = _unitOfWork.Repository<Notification>();
-
-            var notification = await repo.Query()
-                .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
+            var notification = await _unitOfWork.NotificationRepository
+                .GetByIdAndUserIdAsync(
+                    id,
+                    userId,
+                    cancellationToken);
 
             if (notification == null)
+            {
                 throw new Exception("Notification not found");
+            }
 
             return _mapper.Map<NotificationDetailsDto>(notification);
         }
 
-        public async Task<NotificationListResponse> GetMyNotificationsAsync(string userId, PaginationParameters param)
+        public async Task<NotificationListResponse> GetMyNotificationsAsync(
+            string userId,
+            PaginationParameters param,
+            CancellationToken cancellationToken = default)
         {
+            var items = await _unitOfWork.NotificationRepository
+                .GetUserNotificationsAsync(
+                    userId,
+                    param.PageIndex,
+                    param.PageSize,
+                    cancellationToken);
 
-            var repo = _unitOfWork.Repository<Notification>();
-
-            var query = repo.Query()
-                .Where(n => n.UserId == userId)
-                .OrderByDescending(n => n.CreatedAt);
-
-            var totalCount = await query.CountAsync();
-
-            var items = await query
-                .Skip((param.PageIndex - 1) * param.PageSize)
-                .Take(param.PageSize)
-                .ToListAsync();
+            var totalCount = await _unitOfWork.NotificationRepository
+                .GetUserNotificationsCountAsync(
+                    userId,
+                    cancellationToken);
 
             return new NotificationListResponse
             {
@@ -183,48 +259,59 @@ namespace CarWare.Application.Services
             };
         }
 
-        public async Task<int> GetUnreadCountAsync(string userId)
+        public async Task<int> GetUnreadCountAsync(
+            string userId,
+            CancellationToken cancellationToken = default)
         {
-            var repo = _unitOfWork.Repository<Notification>();
-
-            return await repo.Query()
-                .CountAsync(n => n.UserId == userId && !n.IsRead);
+            return await _unitOfWork.NotificationRepository
+                .GetUnreadCountAsync(
+                    userId,
+                    cancellationToken);
         }
 
-        public async Task MarkAllAsReadAsync(string userId)
+        public async Task MarkAllAsReadAsync(
+            string userId,
+            CancellationToken cancellationToken = default)
         {
-            var repo = _unitOfWork.Repository<Notification>();
+            var notifications = await _unitOfWork.NotificationRepository
+                .GetUnreadNotificationsAsync(
+                    userId,
+                    cancellationToken);
 
-            var notifications = await repo.Query()
-                .Where(n => n.UserId == userId && !n.IsRead)
-                .ToListAsync();
-
-            foreach (var n in notifications)
+            foreach (var notification in notifications)
             {
-                n.IsRead = true;
-                n.ReadAt = DateTime.UtcNow;
+                notification.IsRead = true;
+                notification.ReadAt = DateTime.UtcNow;
             }
 
-            await _unitOfWork.CompleteAsync();
+            await _unitOfWork.CompleteAsync(cancellationToken);
         }
 
-        public async Task MarkAsReadAsync(int id, string userId)
+        public async Task MarkAsReadAsync(
+            int id,
+            string userId,
+            CancellationToken cancellationToken = default)
         {
-            var repo = _unitOfWork.Repository<Notification>();
-
-            var notification = await repo.Query()
-                .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
+            var notification = await _unitOfWork.NotificationRepository
+                .GetByIdAndUserIdAsync(
+                    id,
+                    userId,
+                    cancellationToken);
 
             if (notification == null)
+            {
                 throw new Exception("Notification not found");
+            }
 
             if (!notification.IsRead)
             {
                 notification.IsRead = true;
                 notification.ReadAt = DateTime.UtcNow;
 
-                repo.Update(notification);
-                await _unitOfWork.CompleteAsync();
+                _unitOfWork.NotificationRepository
+                    .Update(notification);
+
+                await _unitOfWork.CompleteAsync(cancellationToken);
             }
         }
     }
