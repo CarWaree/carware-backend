@@ -31,6 +31,11 @@ namespace CarWare.API
 
             builder.WebHost.UseUrls("https://localhost:7136", "http://0.0.0.0:7136");
 
+            var jwtKey = builder.Configuration["JWT:Key"];
+
+            if (string.IsNullOrEmpty(jwtKey))
+                throw new Exception("JWT Key is missing");
+
             //Add services to the container.
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
