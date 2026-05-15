@@ -148,7 +148,10 @@ namespace CarWare.API.Controllers
         {
             var result = await _authService.GoogleLoginAsync(model.IdToken);
 
-            return Ok(result);
+            return Ok(ApiResponseGeneric<AuthResponseDto>.Success(
+                result.Data,
+                "Token refreshed successfully"
+            ));
         }
 
         [HttpGet("google-callback")]
