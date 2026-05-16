@@ -22,18 +22,21 @@ namespace CarWare.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAuthService _authService;
         private readonly IWebHostEnvironment _env;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
         public ProfileService(UserManager<ApplicationUser> userManager,
         IMapper mapper,
         IUnitOfWork unitOfWork,
         IAuthService authService,
-        IWebHostEnvironment env)
+        IWebHostEnvironment env,
+        IHttpContextAccessor httpContextAccessor)
         {
             _userManager = userManager;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
             _authService = authService;
             _env = env;
-
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async  Task<Result<EditProfileResponseDto>> GetProfileAsync(string userId)
@@ -122,7 +125,11 @@ namespace CarWare.Application.Services
                 await file.CopyToAsync(stream);
             }
 
-            user.ProfileImageUrl = $"/profile-images/{uniqueFileName}";
+            var request = _httpContextAccessor.HttpContext!.Request;
+
+            user.ProfileImageUrl =
+                $"{request.Scheme}://{request.Host}/profile-images/{uniqueFileName}";
+
             await _userManager.UpdateAsync(user);
 
             return Result<string>.Ok(user.ProfileImageUrl);

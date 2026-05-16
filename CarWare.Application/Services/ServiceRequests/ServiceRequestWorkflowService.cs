@@ -32,8 +32,7 @@ namespace CarWare.Application.Services.ServiceRequests
             _currentUserService.ServiceCenterId
             ?? throw new Exception("ServiceCenterId not found");
 
-        public async Task<Result<AcceptResponseDto>>
-            AcceptAsync(int id, AcceptServiceRequestDto dto)
+        public async Task<Result<AcceptResponseDto>> AcceptAsync(int id, AcceptServiceRequestDto dto)
         {
             var request = await _unitOfWork.ServiceRequestRepository
                 .GetAllQueryable()
@@ -59,12 +58,19 @@ namespace CarWare.Application.Services.ServiceRequests
 
             await _unitOfWork.CompleteAsync();
 
+            var technicianName = request.Technician?.UserName;
+
+            var body =
+                $"Your request has been accepted by {request.Technician?.UserName}.\n" +
+                $"Estimated Cost: {request.EstimatedCost}\n" +
+                $"Estimated Completion: {request.EstimatedCompletion:yyyy-MM-dd HH:mm}";
+
             _backgroundJobClient.Enqueue<NotificationJobs>(job =>
                 job.Send(new SendNotificationDto
                 {
                     UserId = request.UserId,
-                    Title = "Request Accepted",
-                    Body = "Your request has been accepted",
+                    Title = "Request Confirmed",
+                    Body = body,
                     Channel = NotificationChannel.Push
                 }));
 

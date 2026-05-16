@@ -27,14 +27,14 @@ namespace CarWare.Application.Services.ServiceRequests
 
         public async Task<Result<DashboardResponse>> GetDashboardAsync(DashboardQueryParams queryParams)
         {
-            // ── Stat cards ───────
+            // ── Stat cards 
             var requestCount = await _unitOfWork.ServiceRequestRepository
                 .CountTodayByCenterIdAsync(CenterId);
 
             var todayIncome = await _unitOfWork.ServiceRequestRepository
                 .SumTodayIncomeByCenterIdAsync(CenterId);
 
-            // ── Calendar window (default = current week starting Sunday) ───
+            // ── Calendar window (default = current week starting Sunday) 
             var weekStart = queryParams.WeekStart?.Date
                 ?? GetCurrentWeekStart();
             var weekEnd = weekStart.AddDays(7);
@@ -43,7 +43,7 @@ namespace CarWare.Application.Services.ServiceRequests
                 .GetWeeklyAppointments(CenterId, weekStart, weekEnd)
                 .ToListAsync();
 
-            // ── Build calendar days (Sun → Sat) ────────
+            // ── Build calendar days 
             var calendarDays = Enumerable.Range(0, 7)
                 .Select(offset =>
                 {
@@ -90,7 +90,7 @@ namespace CarWare.Application.Services.ServiceRequests
         private static DateTime GetCurrentWeekStart()
         {
             var today = DateTime.UtcNow.Date;
-            var diff = (7 + (int)today.DayOfWeek - (int)DayOfWeek.Sunday) % 7;
+            var diff = (7 + (int)today.DayOfWeek - (int)DayOfWeek.Saturday) % 7;
             return today.AddDays(-diff);
         }
     }

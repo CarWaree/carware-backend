@@ -97,6 +97,9 @@ namespace CarWare.API
                 googleOptions.CallbackPath = "/auth/google-callback";
             });
 
+            //Accessor
+            builder.Services.AddHttpContextAccessor();
+
             //Hangfire 
             builder.Services.AddHangfire(config =>
                 config.UseSqlServerStorage(
