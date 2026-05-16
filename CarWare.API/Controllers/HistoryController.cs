@@ -10,9 +10,9 @@ namespace CarWare.API.Controllers
     [Authorize]
     public class HistoryController : ControllerBase
     {
-        private readonly IServiceRequestService _service;
+        private readonly IServiceRequestHistoryService _service;
 
-        public HistoryController(IServiceRequestService service)
+        public HistoryController(IServiceRequestHistoryService service)
         {
             _service = service;
         }
