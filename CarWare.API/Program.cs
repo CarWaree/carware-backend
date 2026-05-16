@@ -4,6 +4,7 @@ using CarWare.Application.Common.Security;
 using CarWare.Application.Interfaces;
 using CarWare.Application.Mapping;
 using CarWare.Application.Services;
+using CarWare.Application.Services.ServiceRequests;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
 using CarWare.Domain.Interfaces;
@@ -91,8 +92,8 @@ namespace CarWare.API
             })
             .AddGoogle("Google", googleOptions =>
             {
-                googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-                googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+                googleOptions.ClientId = builder.Configuration["Google:ClientId"];
+                googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"];
                 googleOptions.CallbackPath = "/auth/google-callback";
             });
 
@@ -129,8 +130,11 @@ namespace CarWare.API
             builder.Services.AddScoped<IAppointmentService, AppointmentService>();
             //Profile
             builder.Services.AddScoped<IProfileService, ProfileService>();
-            //Service Request
-            builder.Services.AddScoped<IServiceRequestService, ServiceRequestService>();
+            //Service Requests
+            builder.Services.AddScoped<IServiceRequestQueryService, ServiceRequestQueryService>();
+            builder.Services.AddScoped<IServiceRequestWorkflowService, ServiceRequestWorkflowService>();
+            //History
+            builder.Services.AddScoped<IServiceRequestHistoryService, ServiceRequestHistoryService>();
             //Notification
             builder.Services.AddScoped<INotificationService, NotificationService>();
             //Otp Generator
@@ -162,7 +166,7 @@ namespace CarWare.API
                                   policy =>
                                   {
                                       policy
-                                            .WithOrigins() 
+                                            .WithOrigins("http://localhost:5173") 
                                             .AllowAnyHeader()
                                             .AllowAnyMethod()
                                             .AllowCredentials();

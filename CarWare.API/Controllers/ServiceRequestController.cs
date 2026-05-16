@@ -13,18 +13,21 @@ namespace CarWare.API.Controllers
     [Authorize(Roles = "CENTERADMIN")]
     public class ServiceRequestController : ControllerBase
     {
-        private readonly IServiceRequestService _service;
+        public IServiceRequestQueryService _queryService { get; }
+        public IServiceRequestWorkflowService _workflowService { get; }
 
-        public ServiceRequestController(IServiceRequestService service)
+        public ServiceRequestController
+            (IServiceRequestQueryService queryService, IServiceRequestWorkflowService workflowService)
         {
-            _service = service;
+            _queryService = queryService;
+            _workflowService = workflowService;
         }
 
         #region Dashboard
         [HttpGet]
         public async Task<ActionResult> GetDashboard([FromQuery] ServiceRequestQueryParams queryParams)
         {
-            var result = await _service.GetDashboardRequestsAsync(queryParams);
+            var result = await _queryService.GetRequestsAsync(queryParams);
 
             if (!result.Success)
                 return BadRequest(ApiResponseGeneric<ServiceRequest>.Fail(result.Error!));
@@ -38,7 +41,7 @@ namespace CarWare.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult> GetById(int id)
         {
-            var result = await _service.GetRequestDetailsAsync(id);
+            var result = await _queryService.GetRequestDetailsAsync(id);
 
             return Ok(ApiResponseGeneric<ServiceRequestDto>.Success(result.Data));
         }
@@ -50,7 +53,7 @@ namespace CarWare.API.Controllers
         [HttpPatch("{id}/accept")]
         public async Task<ActionResult> Accept(int id, [FromBody] AcceptServiceRequestDto dto)
         {
-            await _service.AcceptAsync(id, dto);
+            await _workflowService.AcceptAsync(id, dto);
 
             return Ok(ApiResponse.Success("Request accepted successfully"));
         }
@@ -58,7 +61,7 @@ namespace CarWare.API.Controllers
         [HttpPatch("{id}/reject")]
         public async Task<ActionResult> Reject(int id, [FromBody] RejectServiceRequestDto dto)
         {
-            await _service.RejectAsync(id, dto);
+            await _workflowService.RejectAsync(id, dto);
 
             return Ok(ApiResponse.Success("Request rejected successfully"));
         }
@@ -66,7 +69,7 @@ namespace CarWare.API.Controllers
         [HttpPatch("{id}/complete")]
         public async Task<ActionResult> Complete(int id, [FromBody] CompleteServiceRequestDto dto)
         {
-            await _service.CompleteAsync(id, dto);
+            await _workflowService.CompleteAsync(id, dto);
 
             return Ok(ApiResponse.Success("Request completed successfully"));
         }
