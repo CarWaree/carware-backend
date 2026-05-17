@@ -125,10 +125,7 @@ namespace CarWare.Application.Services
                 await file.CopyToAsync(stream);
             }
 
-            var request = _httpContextAccessor.HttpContext!.Request;
-
-            user.ProfileImageUrl =
-                $"{request.Scheme}://{request.Host}/profile-images/{uniqueFileName}";
+            user.ProfileImageUrl = $"/profile-images/{uniqueFileName}";
 
             await _userManager.UpdateAsync(user);
 
