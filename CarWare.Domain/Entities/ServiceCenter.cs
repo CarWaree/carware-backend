@@ -7,9 +7,13 @@ namespace CarWare.Domain.Entities
     {
         [Required]
         public string Name { get; set; }
+
         public string Location { get; set; }
+
         [Phone]
         public string Phone { get; set; }
+
+        public ICollection<Slot> Slots { get; set; } = new List<Slot>();
 
         public ICollection<ApplicationUser> Admins { get; set; } = new List<ApplicationUser>();
 

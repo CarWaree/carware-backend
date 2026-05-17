@@ -6,6 +6,7 @@ namespace CarWare.Domain.Entities
         public int ServiceRequestId { get; set; }
         public ServiceRequest ServiceRequest { get; set; }
 
+
         public int MaintenanceTypeId { get; set; }
         public MaintenanceType MaintenanceType { get; set; }
 
