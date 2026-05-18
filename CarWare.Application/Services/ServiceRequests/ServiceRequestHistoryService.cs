@@ -42,7 +42,9 @@ namespace CarWare.Application.Services.ServiceRequests
 
                     ServiceName = x.ServiceRequestServices
                         .Select(s => s.MaintenanceType.Name)
-                        .FirstOrDefault()
+                        .FirstOrDefault(),
+
+                    TotalPrice = x.TotalPrice
                 })
                 .ToListAsync();
 
@@ -73,9 +75,9 @@ namespace CarWare.Application.Services.ServiceRequests
                         .Select(s => s.MaintenanceType.Name)
                         .FirstOrDefault(),
 
-                    ServiceDetails = x.ServiceRequestServices
-                        .Select(s => s.Description)
-                        .FirstOrDefault()
+                    ServiceDetails = x.TechnicianNotes,
+
+                    TotalPrice = x.TotalPrice,
                 })
                 .FirstOrDefaultAsync();
 

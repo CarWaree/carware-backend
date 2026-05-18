@@ -21,7 +21,7 @@ namespace CarWare.Application.Services
             var smtpHost = _configuration["EmailSettings:SmtpHost"];
             var smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"]);
             var senderEmail = _configuration["EmailSettings:SenderEmail"];
-            var senderPassword = _configuration["EmailSettings:SenderPassword"];
+            var senderPassword = _configuration["Email:Password"];
             var senderDisplayName = _configuration["EmailSettings:SenderDisplayName"];
 
             var smtpClient = new SmtpClient(smtpHost)

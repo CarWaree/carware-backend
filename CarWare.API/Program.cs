@@ -97,6 +97,9 @@ namespace CarWare.API
                 googleOptions.CallbackPath = "/auth/google-callback";
             });
 
+            //Accessor
+            builder.Services.AddHttpContextAccessor();
+
             //Hangfire 
             builder.Services.AddHangfire(config =>
                 config.UseSqlServerStorage(
@@ -130,6 +133,8 @@ namespace CarWare.API
             builder.Services.AddScoped<IAppointmentService, AppointmentService>();
             //Profile
             builder.Services.AddScoped<IProfileService, ProfileService>();
+            //Dashboard
+            builder.Services.AddScoped<IDashboardService, DashboardService>();
             //Service Requests
             builder.Services.AddScoped<IServiceRequestQueryService, ServiceRequestQueryService>();
             builder.Services.AddScoped<IServiceRequestWorkflowService, ServiceRequestWorkflowService>();

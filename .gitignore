@@ -8,6 +8,9 @@ obj/
 *.suo
 *.rsuser
 
+# WWWRoot
+wwwroot/profile-images/
+
 # Database
 *.db
 *.db-shm
