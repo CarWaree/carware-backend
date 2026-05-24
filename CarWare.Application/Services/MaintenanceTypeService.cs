@@ -22,7 +22,8 @@ namespace CarWare.Application.Services
             _mapper = mapper;
         }
 
-        public async Task<Result<IEnumerable<MaintenanceTypeDto>>> GetAllAsync()
+        //Services for a Specific Center 
+        public async Task<Result<IEnumerable<MaintenanceTypeDto>>> GetCenterServicesAsync(int centerId)
         {
             var data = await _unitOfWork.Repository<MaintenanceType>().GetAllAsync();
 
@@ -33,5 +34,7 @@ namespace CarWare.Application.Services
 
             return Result<IEnumerable<MaintenanceTypeDto>>.Ok(mapped);
         }
+
+
     }
 }

@@ -135,6 +135,7 @@ namespace CarWare.API
             builder.Services.AddScoped<IProfileService, ProfileService>();
             //Dashboard
             builder.Services.AddScoped<IDashboardService, DashboardService>();
+            builder.Services.AddScoped<ISetupService, SetupService>();
             //Service Requests
             builder.Services.AddScoped<IServiceRequestQueryService, ServiceRequestQueryService>();
             builder.Services.AddScoped<IServiceRequestWorkflowService, ServiceRequestWorkflowService>();

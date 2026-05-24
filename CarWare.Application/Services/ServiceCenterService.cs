@@ -1,43 +1,77 @@
 ﻿using AutoMapper;
 using CarWare.Application.Common;
-using CarWare.Application.DTOs.Provider_Center;
+using CarWare.Application.DTOs.Maintenance;
+using CarWare.Application.DTOs.Slots;
 using CarWare.Application.Interfaces;
-using CarWare.Infrastructure.Context;
-using Microsoft.EntityFrameworkCore;
+using CarWare.Domain;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
 
 namespace CarWare.Application.Services
 {
     public class ServiceCenterService : IServiceCenterService
     {
-        private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
+        private readonly IUnitOfWork _uow;
 
-        public ServiceCenterService(ApplicationDbContext context, IMapper mapper)
+        public ServiceCenterService(
+            IMapper mapper,
+            IUnitOfWork uow)
         {
-            _context = context;
             _mapper = mapper;
+            _uow = uow;
         }
 
-        public async Task<Result<IEnumerable<ServiceCenterDto>>> GetAllAsync()
+        // Available time slots for a specific center
+        public async Task<Result<CenterSlotsResponseDto>>
+            GetCenterSlotsAsync(int centerId)
         {
-            var entities = await _context.ServiceCenters.ToListAsync();
-            var dtos = _mapper.Map<IEnumerable<ServiceCenterDto>>(entities);
-            return Result<IEnumerable<ServiceCenterDto>>.Ok(dtos);
+            var center = await _uow.ServiceCenterRepository
+                .GetWithDetailsAsync(centerId);
+
+            if (center == null)
+                return Result<CenterSlotsResponseDto>
+                    .Fail("Service center not found");
+
+            // center.Slots already loaded from GetWithDetailsAsync
+            var response = new CenterSlotsResponseDto
+            {
+                ServiceCenterId = center.Id,
+                CenterName = center.Name,
+
+                Slots = center.Slots.Select(s => new SlotDto
+                {
+                    Id = s.Id,
+                    DayOfWeek = s.DayOfWeek.ToString(),
+                    StartTime = s.StartTime.ToString(@"hh\:mm"),
+                    EndTime = s.EndTime.ToString(@"hh\:mm"),
+                }).ToList()
+            };
+
+            return Result<CenterSlotsResponseDto>.Ok(response);
         }
 
-        public async Task<Result<IEnumerable<ServiceCenterDto>>> GetByServiceTypeAsync(int serviceTypeId)
+        // Services for a specific center
+        public async Task<Result<List<MaintenanceTypeDto>>>
+            GetCenterServicesAsync(int centerId)
         {
-            var entities = await _context.ServiceCenters
-                .Include(sc => sc.ProviderServices)
-                .Where(sc => sc.ProviderServices.Any(ps => ps.ServiceId == serviceTypeId))
-                .ToListAsync();
+            var providerServices = await _uow
+                .ProviderServicesRepository
+                .GetByCenterIdAsync(centerId);
 
-            var dtos = _mapper.Map<IEnumerable<ServiceCenterDto>>(entities);
-            return Result<IEnumerable<ServiceCenterDto>>.Ok(dtos);
+            if (providerServices == null || !providerServices.Any())
+                return Result<List<MaintenanceTypeDto>>
+                    .Fail("No services found for this center");
+
+            var result = providerServices.Select(ps =>
+                new MaintenanceTypeDto
+                {
+                    id = ps.Service.Id,
+                    Name = ps.Service.Name
+                }).ToList();
+
+            return Result<List<MaintenanceTypeDto>>.Ok(result);
         }
     }
 }
