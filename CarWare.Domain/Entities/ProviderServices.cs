@@ -1,5 +1,4 @@
-﻿
-namespace CarWare.Domain.Entities
+﻿namespace CarWare.Domain.Entities
 {
     public class ProviderServices
     {

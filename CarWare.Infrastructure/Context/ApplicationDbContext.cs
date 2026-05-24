@@ -17,6 +17,7 @@ namespace CarWare.Infrastructure.Context
         public DbSet<MaintenanceReminder> maintenances { get; set; }
         public DbSet<MaintenanceType> MaintenanceTypes { get; set; }
         public DbSet<ServiceCenter> ServiceCenters { get; set; }
+        public DbSet<Slot> Slots { get; set; }
         public DbSet<ProviderServices> ProviderServices { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<ServiceRequest> ServiceRequest { get; set; }
@@ -30,43 +31,7 @@ namespace CarWare.Infrastructure.Context
             base.OnModelCreating(builder);
             builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
-            builder.Entity<Vehicle>()
-            .HasOne(c => c.user)
-            .WithMany(c => c.vehicles)
-            .HasForeignKey(c => c.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<Model>()
-                .HasOne(m => m.Brand)
-                .WithMany(b => b.Models)
-                .HasForeignKey(m => m.BrandId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<Vehicle>()
-                .HasOne(v => v.Brand)
-                .WithMany(b => b.Vehicles)
-                .HasForeignKey(v => v.BrandId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<Vehicle>()
-                .HasOne(v => v.Model)
-                .WithMany(m => m.Vehicles)
-                .HasForeignKey(v => v.ModelId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<MaintenanceReminder>()
-                .HasOne(m => m.Vehicle)
-                .WithMany(v => v.maintenances)
-                .HasForeignKey(m => m.VehicleId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<MaintenanceReminder>()
-                .HasOne(m => m.Type)
-                .WithMany(t => t.Reminders)
-                .HasForeignKey(m => m.TypeId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-
+            //Service
             builder.Entity<MaintenanceType>().HasData(
 
                 new MaintenanceType { Id = 1, Name = "Oil Change" },
@@ -80,19 +45,7 @@ namespace CarWare.Infrastructure.Context
                 new MaintenanceType { Id = 9, Name = "Suspension Services" }
             );
 
-            builder.Entity<ProviderServices>()
-                .HasKey(ps => new { ps.ServiceCenterId, ps.ServiceId });
-
-            builder.Entity<ProviderServices>()
-                .HasOne(ps => ps.ServiceCenter)
-                .WithMany(sc => sc.ProviderServices)
-                .HasForeignKey(ps => ps.ServiceCenterId);
-
-            builder.Entity<ProviderServices>()
-                .HasOne(ps => ps.Service)
-                .WithMany(s => s.ProviderServices)
-                .HasForeignKey(ps => ps.ServiceId);
-
+            //Center
             builder.Entity<ServiceCenter>().HasData(
                 new ServiceCenter { Id = 1, Name = "Provider 1", Location = "Nasr City", Phone = "0123456789" },
                 new ServiceCenter { Id = 2, Name = "Provider 2", Location = "Maadi", Phone = "0112233445" },
@@ -100,75 +53,6 @@ namespace CarWare.Infrastructure.Context
                 new ServiceCenter { Id = 4, Name = "Provider 4", Location = "6th October", Phone = "01233445566" },
                 new ServiceCenter { Id = 5, Name = "Provider 5", Location = "Dokki", Phone = "01099887766" }
             );
-
-            builder.Entity<Appointment>()
-                .HasOne(a => a.user)
-                .WithMany(u => u.Appointments)
-                .HasForeignKey(a => a.UserId);
-
-            builder.Entity<Appointment>()
-                .HasOne(a => a.Vehicle)
-                .WithMany(v => v.Appointments)
-                .HasForeignKey(a => a.VehicleId);
-
-            builder.Entity<Appointment>()
-                .HasOne(a => a.ServiceCenter)
-                .WithMany(s => s.Appointments)
-                .HasForeignKey(a => a.ServiceCenterId);
-
-            builder.Entity<Appointment>()
-                .HasOne(a => a.Service)
-                .WithMany(s => s.Appointments)
-                .HasForeignKey(a => a.ServiceId);
-
-            builder.Entity<ServiceRequestItem>()
-                .HasKey(x => new { x.ServiceRequestId, x.MaintenanceTypeId });
-
-            builder.Entity<ServiceRequestItem>()
-                .HasOne(x => x.ServiceRequest)
-                .WithMany(sr => sr.ServiceRequestServices)
-                .HasForeignKey(x => x.ServiceRequestId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<ServiceRequestItem>()
-                .HasOne(x => x.MaintenanceType)
-                .WithMany()
-                .HasForeignKey(x => x.MaintenanceTypeId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<ServiceRequest>()
-                .HasOne(sr => sr.Appointment)
-                .WithMany()
-                .HasForeignKey(sr => sr.AppointmentId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<ServiceRequest>()
-                .HasOne(sr => sr.User)
-                .WithMany(u => u.ServiceRequests)
-                 .HasForeignKey(sr => sr.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<ServiceRequest>()
-                .HasOne(sr => sr.Technician)
-                .WithMany(u => u.HandledServiceRequests)
-                .HasForeignKey(sr => sr.TechnicianId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<ServiceRequest>()
-             .Property(x => x.EstimatedCost)
-             .HasPrecision(18, 2);
-
-            builder.Entity<Notification>()
-                .HasOne(dt => dt.User)
-                .WithMany(u => u.Notifications)
-                .HasForeignKey(n => n.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<DeviceToken>()
-                .HasOne(dt => dt.User)
-                .WithMany(u => u.DeviceTokens)
-                .HasForeignKey(dt => dt.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

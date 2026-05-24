@@ -48,7 +48,12 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(x => x.ReadAt)
             .IsRequired(false);
 
-        // ⚡ Indexes
+        builder.HasOne(dt => dt.User)
+               .WithMany(u => u.Notifications)
+               .HasForeignKey(n => n.UserId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        // Indexes
         builder.HasIndex(x => x.UserId);
         builder.HasIndex(x => x.IsRead);
 
