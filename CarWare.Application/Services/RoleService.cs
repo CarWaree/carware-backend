@@ -102,6 +102,10 @@ namespace CarWare.Application.Services
                         "ServiceCenterId",
                         dto.ServiceCenterId.Value.ToString()
                     ));
+
+                user.ServiceCenterId = dto.ServiceCenterId;
+
+                await _userManager.UpdateAsync(user);
             }
 
             _logger.LogInformation(

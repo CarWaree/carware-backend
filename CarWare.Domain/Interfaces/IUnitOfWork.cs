@@ -15,6 +15,10 @@ namespace CarWare.Domain
         IServiceRequestRepository ServiceRequestRepository { get; }
         INotificationRepository NotificationRepository { get; }
         IDeviceTokenRepository DeviceTokenRepository { get; }
+        IServiceCenterRepository ServiceCenterRepository { get; }
+        IMaintenanceTypeRepository MaintenanceTypeRepository { get; }
+        IProviderServicesRepository ProviderServicesRepository { get; }
+        ISlotRepository SlotRepository { get; }
         Task<int> CompleteAsync(CancellationToken cancellationToken = default);
     }
 }

@@ -226,8 +226,7 @@ namespace CarWare.Application.Services
                 AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
                 RefreshToken = newRefreshToken.Token,
                 AccessTokenExpiration = jwt.ValidTo,
-                RefreshTokenExpiration = newRefreshToken.ExpiresOn,
-                IsProfileCompleted = user.IsProfileCompleted
+                RefreshTokenExpiration = newRefreshToken.ExpiresOn
             });
         }
 

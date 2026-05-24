@@ -21,6 +21,10 @@ namespace CarWare.Infrastructure.UnitOfWork
         private IServiceRequestRepository _serviceRequestRepository;
         private INotificationRepository _notificationRepository;
         private IDeviceTokenRepository _deviceTokenRepository;
+        private IServiceCenterRepository _serviceCenterRepository;
+        private IMaintenanceTypeRepository _maintenanceTypeRepository;
+        private IProviderServicesRepository _providerServicesRepository;
+        private ISlotRepository _slotRepository;
 
         public UnitOfWork(ApplicationDbContext dbContext)
         {
@@ -44,6 +48,18 @@ namespace CarWare.Infrastructure.UnitOfWork
             => _notificationRepository ??= new NotificationRepository(_dbContext);
         public IDeviceTokenRepository DeviceTokenRepository
             => _deviceTokenRepository ??= new DeviceTokenRepository(_dbContext);
+
+        public IServiceCenterRepository ServiceCenterRepository
+            => _serviceCenterRepository ??= new ServiceCenterRepository(_dbContext);
+
+        public IMaintenanceTypeRepository MaintenanceTypeRepository
+            => _maintenanceTypeRepository ??= new MaintenanceTypeRepository(_dbContext);
+
+        public IProviderServicesRepository ProviderServicesRepository
+            => _providerServicesRepository ??= new ProviderServicesRepository(_dbContext);
+
+        public ISlotRepository SlotRepository
+            => _slotRepository ??= new SlotRepository(_dbContext);
 
         public async Task<int> CompleteAsync(
             CancellationToken cancellationToken = default)

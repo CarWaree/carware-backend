@@ -169,24 +169,15 @@ namespace CarWare.API.Controllers
         }
 
         [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefreshToken()
+        public async Task<IActionResult> RefreshToken([FromBody]RefreshTokenRequestDto dto)
         {
-            var refreshToken = Request.Cookies["refreshToken"];
-
-            if (string.IsNullOrEmpty(refreshToken))
+            if (string.IsNullOrWhiteSpace(dto.RefreshToken))
                 return Unauthorized(ApiResponse.Fail("Missing refresh token"));
-
-            var dto = new RefreshTokenRequestDto
-            {
-                RefreshToken = refreshToken
-            };
 
             var result = await _authService.RefreshTokenAsync(dto);
 
             if (!result.Success)
                 return Unauthorized(ApiResponse.Fail(result.Error!));
-
-            SetRefreshTokenCookie(result.Data!.RefreshToken);
 
             return Ok(ApiResponseGeneric<AuthResponseDto>.Success(
                 result.Data,
