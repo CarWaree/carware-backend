@@ -1,11 +1,9 @@
 ﻿using CarWare.API.Errors;
 using CarWare.API.Errors.NonGeneric;
+using CarWare.Application.DTOs.Dashboard.Profile;
 using CarWare.Application.DTOs.Profile;
 using CarWare.Application.Interfaces;
-using CarWare.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -65,6 +63,18 @@ namespace CarWare.API.Controllers
                 return BadRequest(ApiResponse.Fail(result.Error));
 
             return Ok(ApiResponse.Success(result.Data));
+        }
+
+        // GET api/profile/center
+        [HttpGet("center")]
+        public async Task<IActionResult> GetCenterProfile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _profileService.GetCenterProfileAsync(userId);
+            if (!result.Success)
+                return NotFound(ApiResponse.Fail(result.Error));
+            return Ok(ApiResponseGeneric<CenterProfileDto>
+                .Success(result.Data, "Center profile retrieved successfully"));
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
 using CarWare.Application.Common;
 using CarWare.Application.DTOs.Auth;
+using CarWare.Application.DTOs.Dashboard.Profile;
+using CarWare.Application.DTOs.Maintenance;
 using CarWare.Application.DTOs.Profile;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
@@ -39,7 +41,7 @@ namespace CarWare.Application.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async  Task<Result<EditProfileResponseDto>> GetProfileAsync(string userId)
+        public async Task<Result<EditProfileResponseDto>> GetProfileAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
@@ -84,9 +86,9 @@ namespace CarWare.Application.Services
 
                 var otpResult = await _authService.ResendEmailOtpAsync(
                     new ResendEmailDto
-                        {
-                            Email = newEmail
-                        });
+                    {
+                        Email = newEmail
+                    });
                 if (!otpResult.Success)
                     return Result<string>.Fail("Failed to send verification email");
 
@@ -130,6 +132,38 @@ namespace CarWare.Application.Services
             await _userManager.UpdateAsync(user);
 
             return Result<string>.Ok(user.ProfileImageUrl);
+        }
+
+        public async Task<Result<CenterProfileDto>> GetCenterProfileAsync(string UserId)
+        {
+            // 1. Find the center 
+            var center = await _unitOfWork.ServiceCenterRepository
+                .GetByAdminUserIdAsync(UserId);
+
+            if (center == null)
+                return Result<CenterProfileDto>
+                    .Fail("No ServiceCenter linked to this admin account.");
+
+            // 2. Get services 
+            var providerServices = await _unitOfWork.ProviderServicesRepository
+                .GetByCenterIdAsync(center.Id);
+
+            // 4. Map to DTO
+            var dto = new CenterProfileDto
+            {
+                Id = center.Id,
+                Name = center.Name,
+                WorkingFrom = center.WorkingFrom,
+                WorkingTo = center.WorkingTo,
+
+                Services = providerServices.Select(ps => new MaintenanceTypeDto
+                {
+                    id = ps.Service.Id,
+                    Name = ps.Service.Name
+                }).ToList(),
+            };
+
+            return Result<CenterProfileDto>.Ok(dto);
         }
     }
 }

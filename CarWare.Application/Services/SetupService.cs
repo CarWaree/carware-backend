@@ -31,6 +31,8 @@ namespace CarWare.Application.Services
 
             // 2. Update basic info
             center.Name = dto.Name;
+            center.WorkingFrom = dto.WorkingFrom;  
+            center.WorkingTo = dto.WorkingTo;  
 
             _uow.ServiceCenterRepository.Update(center);
 
