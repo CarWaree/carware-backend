@@ -24,18 +24,18 @@ namespace CarWare.API.Controllers
             _config = config;
         }
 
-        private void SetRefreshTokenCookie(string token, DateTime? expires = null)
-        {
-            Response.Cookies.Append("refreshToken", token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = expires.HasValue
-                    ? new DateTimeOffset(expires.Value)
-                    : DateTimeOffset.UtcNow.AddDays(7)
-            });
-        }
+        //private void SetRefreshTokenCookie(string token, DateTime? expires = null)
+        //{
+        //    Response.Cookies.Append("refreshToken", token, new CookieOptions
+        //    {
+        //        HttpOnly = true,
+        //        Secure = true,
+        //        SameSite = SameSiteMode.Strict,
+        //        Expires = expires.HasValue
+        //            ? new DateTimeOffset(expires.Value)
+        //            : DateTimeOffset.UtcNow.AddDays(7)
+        //    });
+        //}
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto dto)
@@ -58,7 +58,7 @@ namespace CarWare.API.Controllers
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
 
-            SetRefreshTokenCookie(result.Data!.RefreshToken);
+            //SetRefreshTokenCookie(result.Data!.RefreshToken);
 
             return Ok(ApiResponseGeneric<VerifyEmailResponseDto>.Success(
                     data: result.Data,
@@ -84,7 +84,7 @@ namespace CarWare.API.Controllers
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
 
-            SetRefreshTokenCookie(result.Data!.RefreshToken, result.Data.RefreshTokenExpiration);
+            //SetRefreshTokenCookie(result.Data!.RefreshToken, result.Data.RefreshTokenExpiration);
 
             return Ok(ApiResponseGeneric<LoginResponseDto>
                 .Success(result.Data, "Login successful"));
@@ -133,6 +133,21 @@ namespace CarWare.API.Controllers
             if (!result.Success)
                 return BadRequest(ApiResponse.Fail(result.Error!));
             return Ok(ApiResponse.Success("Password reset successfully"));
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _authService.ChangePasswordAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse.Fail(result.Error!));
+
+            return Ok(ApiResponse.Success("Password changed successfully"));
         }
 
         [HttpGet("google-login")]
