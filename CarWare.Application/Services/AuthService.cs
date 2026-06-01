@@ -9,11 +9,13 @@ using CarWare.Application.Interfaces;
 using CarWare.Domain.Entities;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
@@ -34,6 +36,7 @@ namespace CarWare.Application.Services
         private readonly IJwtTokenGenerator _jwtToken;
         private readonly IMapper _mapper;
         private readonly ILogger<AuthService> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private const int OtpValidityMinutes = 3;
         private const int MaxOtpAttempts = 5;
 
@@ -47,7 +50,8 @@ namespace CarWare.Application.Services
             IDistributedCache cache,
             IConfiguration config,
             IMapper mapper,
-            ILogger<AuthService> logger)
+            ILogger<AuthService> logger,
+            IHttpContextAccessor httpContextAccessor)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -59,6 +63,7 @@ namespace CarWare.Application.Services
             _jwtToken = jwtToken;
             _mapper = mapper;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         // ─── Register
@@ -293,6 +298,7 @@ namespace CarWare.Application.Services
 
             return Result<bool>.Ok(true);
         }
+
         // ─── Verify Reset OTP 
         public async Task<Result<ResetPasswordResultDto>> VerifyOtpAsync(VerifyOtpDto optDto)
         {
@@ -373,6 +379,43 @@ namespace CarWare.Application.Services
             return Result<bool>.Ok(true);
         }
 
+        // ─── Change Password
+        public async Task<Result<bool>> ChangePasswordAsync(ChangePasswordDto changeDto)
+        {
+            // Get Current User
+            var userId = _httpContextAccessor.HttpContext?
+                    .User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+                return Result<bool>.Fail("User not found");
+
+            // Confirm password validation
+            if (changeDto.NewPassword != changeDto.ConfirmPassword)
+                return Result<bool>.Fail("Passwords do not match");
+
+            // Prevent same password
+            if (changeDto.OldPassword == changeDto.NewPassword)
+                return Result<bool>.Fail("New password cannot be same as old password");
+
+            // Change password using Identity
+            var result = await _userManager.ChangePasswordAsync(
+                user,
+                changeDto.OldPassword,
+                changeDto.NewPassword
+            );
+
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(e => e.Description).ToList();
+
+                return Result<bool>.Fail(string.Join(" | ", errors));
+            }
+
+            return Result<bool>.Ok(true);
+        }
+
         // ─── Google OAuth (Callback)
         public (string RedirectUrl, AuthenticationProperties Props) GetGoogleRedirectUrl(string? returnUrl = null)
         {
@@ -382,9 +425,7 @@ namespace CarWare.Application.Services
             var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
             return (redirectUrl, props);
         }
-
-        public async Task<Result<AuthResponseDto>> HandleGoogleCallbackAsync
-            (string? returnUrl = null, string? remoteError = null)
+        public async Task<Result<AuthResponseDto>> HandleGoogleCallbackAsync (string? returnUrl = null, string? remoteError = null)
         {
             if (remoteError != null)
                 return Result<AuthResponseDto>.Fail(remoteError, "GoogleAuthError");
@@ -483,6 +524,7 @@ namespace CarWare.Application.Services
             }
         }
 
+        #region Helpers
         // ─── Private Helpers 
         private async Task SendEmailOtpAsync(ApplicationUser user)
         {
@@ -529,5 +571,6 @@ namespace CarWare.Application.Services
             var attemptsStr = await _cache.GetStringAsync(attemptsKey);
             return string.IsNullOrEmpty(attemptsStr) ? 0 : int.Parse(attemptsStr);
         }
+        #endregion
     }
 }

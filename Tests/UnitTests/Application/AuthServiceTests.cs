@@ -30,6 +30,7 @@ namespace Tests.UnitTesting.Application
         private readonly Mock<IEmailSender> _emailSenderMock;
         private readonly Mock<IMapper> _mapperMock;
         private readonly Mock<ILogger<AuthService>> _loggerMock;
+        private readonly Mock<IHttpContextAccessor> _accessorMock;
 
         private readonly AuthService _sut;
 
@@ -47,6 +48,7 @@ namespace Tests.UnitTesting.Application
             _emailSenderMock = new Mock<IEmailSender>();
             _mapperMock = new Mock<IMapper>();
             _loggerMock = new Mock<ILogger<AuthService>>();
+            _accessorMock = new Mock<IHttpContextAccessor>();
 
             // ─── SUT ───
             _sut = new AuthService(
@@ -59,7 +61,8 @@ namespace Tests.UnitTesting.Application
                 _cacheMock.Object,
                 _configMock.Object,
                 _mapperMock.Object,
-                _loggerMock.Object
+                _loggerMock.Object,
+                _accessorMock.Object
             );
         }
 

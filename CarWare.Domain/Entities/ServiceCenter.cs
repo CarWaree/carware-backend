@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace CarWare.Domain.Entities
@@ -12,6 +13,9 @@ namespace CarWare.Domain.Entities
 
         [Phone]
         public string Phone { get; set; }
+
+        public TimeSpan WorkingFrom { get; set; }
+        public TimeSpan WorkingTo { get; set; }
 
         public ICollection<Slot> Slots { get; set; } = new List<Slot>();
 
