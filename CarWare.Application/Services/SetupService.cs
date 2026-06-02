@@ -29,12 +29,20 @@ namespace CarWare.Application.Services
                 return Result<SetupResponseDto>
                     .Fail("No ServiceCenter linked to this admin account.");
 
+            if (dto.WorkingTo <= dto.WorkingFrom)
+            {
+                return Result<SetupResponseDto>.Fail(
+                    "WorkingTo must be greater than WorkingFrom");
+            }
+
             // 2. Update basic info
             center.Name = dto.Name;
             center.WorkingFrom = dto.WorkingFrom;  
             center.WorkingTo = dto.WorkingTo;  
 
             _uow.ServiceCenterRepository.Update(center);
+
+            await _uow.CompleteAsync();
 
             // 3. Sync ProviderServices
             await _uow.ProviderServicesRepository

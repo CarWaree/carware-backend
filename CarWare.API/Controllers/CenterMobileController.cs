@@ -1,5 +1,6 @@
 ﻿using CarWare.API.Errors;
 using CarWare.Application.DTOs.Maintenance;
+using CarWare.Application.DTOs.Provider_Center;
 using CarWare.Application.DTOs.Slots;
 using CarWare.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +16,23 @@ namespace CarWare.API.Controllers
         public CenterMobileController(IServiceCenterService serviceCenterService)
         {
             _serviceCenterService = serviceCenterService;
+        }
+
+        //All Centers 
+        [HttpGet]
+        public async Task<IActionResult> GetAllServiceCenters()
+        {
+            var result = await _serviceCenterService.GetAllServiceCentersAsync();
+
+            if (!result.Success)
+                return NotFound(
+                    ApiResponseGeneric<string>.Fail(result.ErrorCode!)
+                );
+
+            return Ok(
+                ApiResponseGeneric<List<ServiceCenterDto>>
+                    .Success(result.Data!)
+            );
         }
 
         //Services Available at a Specific Center

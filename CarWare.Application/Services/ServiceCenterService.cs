@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using CarWare.Application.Common;
 using CarWare.Application.DTOs.Maintenance;
+using CarWare.Application.DTOs.Provider_Center;
 using CarWare.Application.DTOs.Slots;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
@@ -21,6 +22,21 @@ namespace CarWare.Application.Services
         {
             _mapper = mapper;
             _uow = uow;
+        }
+
+        // Return All Serivce Centers
+        public async Task<Result<List<ServiceCenterDto>>> GetAllServiceCentersAsync()
+        {
+            var centers = await _uow.ServiceCenterRepository.GetAllAsync();
+
+            var result = centers.Select(c => new ServiceCenterDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Location = c.Location
+            }).ToList();
+
+            return Result<List<ServiceCenterDto>>.Ok(result);
         }
 
         // Available time slots for a specific center
