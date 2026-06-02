@@ -61,49 +61,44 @@ namespace CarWare.Application.Services
         public async Task<Result<string>> UpdateProfileAsync(string userId, UpdateProfileDto dto)
         {
             var user = await _userManager.FindByIdAsync(userId);
+
             if (user == null)
                 return Result<string>.Fail("User not found");
 
-            if (!string.IsNullOrWhiteSpace(dto.FullName))
+            // Full Name
+            var names = dto.FullName.Trim().Split(' ', 2);
+
+            user.FirstName = names[0];
+            user.LastName = names.Length > 1 ? names[1] : "";
+
+            // Phone
+            if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
             {
-                var names = dto.FullName.Split(' ', 2);
-                user.FirstName = names[0];
-                user.LastName = names.Length > 1 ? names[1] : "";
+                user.PhoneNumber = dto.PhoneNumber;
             }
 
-            if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
-                user.PhoneNumber = dto.PhoneNumber;
+            // Email
+            var newEmail = dto.Email.Trim().ToLower();
 
-            //  Email Change 
-            var newEmail = dto.PendingEmail?.Trim().ToLower();
-            var currentEmail = user.Email?.Trim().ToLower();
-
-            bool emailChanged = false;
-
-            if (!string.IsNullOrWhiteSpace(newEmail) && newEmail != currentEmail)
+            if (!string.Equals(user.Email, newEmail, StringComparison.OrdinalIgnoreCase))
             {
-                user.PendingEmail = newEmail;
+                var existingUser = await _userManager.FindByEmailAsync(newEmail);
 
-                var otpResult = await _authService.ResendEmailOtpAsync(
-                    new ResendEmailDto
-                    {
-                        Email = newEmail
-                    });
-                if (!otpResult.Success)
-                    return Result<string>.Fail("Failed to send verification email");
+                if (existingUser != null && existingUser.Id != user.Id)
+                    return Result<string>.Fail("Email is already in use");
 
-                emailChanged = true;
+                user.Email = newEmail;
             }
 
             var result = await _userManager.UpdateAsync(user);
-            if (!result.Succeeded)
-                return Result<string>.Fail(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            return Result<string>.Ok(
-                emailChanged
-                    ? "Profile updated successfully. Please verify your new email."
-                    : "Profile updated successfully."
-            );
+            if (!result.Succeeded)
+            {
+                return Result<string>.Fail(
+                    string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
+
+            return Result<string>.Ok("Profile updated successfully");
         }
 
         public async Task<Result<string>> UploadImageAsync(string userId, IFormFile file)
