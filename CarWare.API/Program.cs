@@ -30,7 +30,8 @@ namespace CarWare.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.WebHost.UseUrls("https://localhost:7136", "http://0.0.0.0:7136");
+            //builder.WebHost.UseUrls("https://localhost:8080", "http://0.0.0.0:8080");
+            builder.WebHost.UseUrls("http://0.0.0.0:8080");
 
             var jwtKey = builder.Configuration["JWT:Key"];
 
