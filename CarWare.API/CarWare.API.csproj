@@ -6,7 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <StartupObject>CarWare.API.Program</StartupObject>
     <UserSecretsId>66a61afe-2c1a-40d0-b068-c6825ca96cf0</UserSecretsId>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,6 +4,7 @@ using CarWare.Application.DTOs.Maintenance;
 using CarWare.Application.Interfaces;
 using CarWare.Domain;
 using CarWare.Domain.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,6 +21,25 @@ namespace CarWare.Application.Services
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+        }
+
+        //All Services 
+        public async Task<Result<IEnumerable<MaintenanceTypeDto>>> GetAllAsync()
+        {
+            try
+            {
+                var maintenanceTypes =
+                    await _unitOfWork.Repository<MaintenanceType>().GetAllAsync();
+
+                var result = _mapper.Map<IEnumerable<MaintenanceTypeDto>>(maintenanceTypes);
+
+                return Result<IEnumerable<MaintenanceTypeDto>>.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return Result<IEnumerable<MaintenanceTypeDto>>
+                    .Fail($"An error occurred: {ex.Message}");
+            }
         }
 
         //Services for a Specific Center 

@@ -1,0 +1,37 @@
+# Stage 1: Base Runtime Image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
+
+# Stage 2: Build Image
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+
+# Copy csproj files separately to optimize Docker layer caching
+# Note: We assume this Dockerfile is run from the Solution Root context
+COPY ["CarWare.API/CarWare.API.csproj", "CarWare.API/"]
+COPY ["CarWare.API/Firebase/firebase-key.json", "CarWare.API/"]
+COPY ["CarWare.Application/CarWare.Application.csproj", "CarWare.Application/"]
+COPY ["CarWare.Domain/CarWare.Domain.csproj", "CarWare.Domain/"]
+COPY ["CarWare.Infrastructure/CarWare.Infrastructure.csproj", "CarWare.Infrastructure/"]
+
+# Restore dependencies
+RUN dotnet restore "CarWare.API/CarWare.API.csproj"
+
+# Copy the rest of the source code
+COPY . .
+WORKDIR "/src/CarWare.API"
+RUN dotnet build "CarWare.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# Stage 3: Publish
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "CarWare.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+# Stage 4: Final Production Image
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "CarWare.API.dll"]

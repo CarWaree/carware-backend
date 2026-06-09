@@ -17,19 +17,18 @@ namespace CarWare.API.Controllers
             _service = service;
         }
 
-        //[HttpGet]
-        //public async Task<IActionResult> GetAll()
-        //{
-        //    var result = await _service.GetCenterServicesAsync();
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _service.GetAllAsync();
 
-        //    if (!result.Success)
-        //    {
-        //        return BadRequest(ApiResponse.Fail(result.Error));
-        //    }
+            if (!result.Success)
+            {
+                return BadRequest(ApiResponse.Fail(result.Error!));
+            }
 
-        //    return Ok(ApiResponseGeneric<IEnumerable<MaintenanceTypeDto>>
-        //        .Success(result.Data, "Maintenance types retrieved successfully"));
-        //}
-
+            return Ok(ApiResponseGeneric<IEnumerable<MaintenanceTypeDto>>
+                .Success(result.Data, "Maintenance types retrieved successfully"));
+        }
     }
 }

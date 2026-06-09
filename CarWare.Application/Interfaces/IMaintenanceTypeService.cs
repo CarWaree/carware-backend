@@ -8,6 +8,8 @@ namespace CarWare.Application.Interfaces
 {
     public interface IMaintenanceTypeService
     {
+        Task<Result<IEnumerable<MaintenanceTypeDto>>> GetAllAsync();
+
         Task<Result<IEnumerable<MaintenanceTypeDto>>> GetCenterServicesAsync(int centerId);
     }
 }
