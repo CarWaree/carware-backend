@@ -6,13 +6,21 @@ services:
       dockerfile: CarWare.API/Dockerfile
     ports:
       - "5191:8080"
+      - "5192:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/carware.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=123456
       - ConnectionStrings__DefaultConnection=Server=carware-db,1433;Database=CarWare_DB;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;
       - JWT__Key=bXlzdXBlcnNlY3JldGtleXRoaXNpc3VwZXJzZWNyZXRrZXl0aGF0aXNpc3VwZXJzZWNyZXQ
       - JWT__Issuer=CarWare-API
       - JWT__Audience=CarWare-Users
+      - Google__ClientId=922633197361-7a90uijtmhr3qc8f0gl9g7jr872tmbbg.apps.googleusercontent.com
+      - Google__ClientSecret=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
+      - Email__Password=uxvx wijj lzpc fctx 
+    volumes:
+      - ~/.aspnet/https:/https:ro
     depends_on:
       carware-db:
         condition: service_healthy

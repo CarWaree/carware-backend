@@ -31,7 +31,17 @@ namespace CarWare.API
             var builder = WebApplication.CreateBuilder(args);
 
             //builder.WebHost.UseUrls("https://localhost:8080", "http://0.0.0.0:8080");
-            builder.WebHost.UseUrls("http://0.0.0.0:8080");
+            //builder.WebHost.UseUrls("http://0.0.0.0:8080");
+
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.ListenAnyIP(8080); // HTTP
+
+                options.ListenAnyIP(8081, listenOptions =>
+                {
+                    listenOptions.UseHttps();
+                });
+            });
 
             var jwtKey = builder.Configuration["JWT:Key"];
 
@@ -165,20 +175,22 @@ namespace CarWare.API
             });
 
             //CORS
-            var MyAllowSpecificOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+            //var MyAllowSpecificOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("MyAllowSpecificOrigins",
-                                  policy =>
-                                  {
-                                      policy
-                                            .WithOrigins("http://localhost:5173") 
-                                            .AllowAnyHeader()
-                                            .AllowAnyMethod()
-                                            .AllowCredentials();
-                                  });
-            });
+            //builder.Services.AddCors(options =>
+            //{
+            //    options.AddPolicy("MyAllowSpecificOrigins",
+            //                      policy =>
+            //                      {
+            //                          policy
+            //                                .WithOrigins("http://localhost:5173") 
+            //                                .AllowAnyHeader()
+            //                                .AllowAnyMethod()
+            //                                .AllowCredentials();
+            //                      });
+            //});
+
+            builder.Services.AddCors();
 
             builder.Services.AddControllers()
              .AddJsonOptions(options =>
@@ -187,6 +199,13 @@ namespace CarWare.API
              });
 
             var app = builder.Build();
+
+            app.UseCors(policy => policy
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader());
+
+            app.MapGet("/", () => "CORS is open!");
 
             //update Database 
             using var scope = app.Services.CreateScope();
