@@ -16,17 +16,20 @@ namespace CarWare.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly CarImageService _carImageService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<VehicleService> _logger;
 
         public VehicleService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
+            CarImageService carImageService,
             UserManager<ApplicationUser> userManager,
             ILogger<VehicleService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _carImageService = carImageService;
             _userManager = userManager;
             _logger = logger;
         }
@@ -35,10 +38,12 @@ namespace CarWare.Application.Services
         public async Task<Result<List<VehicleDTOs>>> GetAllVehiclesAsync()
         {
             var vehicles = await _unitOfWork.VehicleRepository.GetAllVehiclesAsync();
+
             if (vehicles == null || !vehicles.Any())
                 return Result<List<VehicleDTOs>>.Fail("No vehicles found.");
 
-            var dto = _mapper.Map<List<VehicleDTOs>>(vehicles);
+            var dto = MapVehiclesToDto(vehicles);
+
             return Result<List<VehicleDTOs>>.Ok(dto);
         }
 
@@ -53,10 +58,12 @@ namespace CarWare.Application.Services
             }
 
             var vehicles = await _unitOfWork.VehicleRepository.GetVehiclesByUserIdAsync(userId);
+
             if (vehicles == null || !vehicles.Any())
                 return Result<List<VehicleDTOs>>.Fail("You have no vehicles.");
 
-            var dto = _mapper.Map<List<VehicleDTOs>>(vehicles);
+            var dto = MapVehiclesToDto(vehicles);
+
             return Result<List<VehicleDTOs>>.Ok(dto);
         }
 
@@ -80,10 +87,12 @@ namespace CarWare.Application.Services
         public async Task<Result<VehicleDTOs>> GetVehicleByIdAsync(int id)
         {
             var vehicle = await _unitOfWork.VehicleRepository.GetCarByIdWithDetailsAsync(id);
+
             if (vehicle == null)
                 return Result<VehicleDTOs>.Fail("Vehicle not found");
 
-            var dto = _mapper.Map<VehicleDTOs>(vehicle);
+            var dto = MapVehicleToDto(vehicle);
+
             return Result<VehicleDTOs>.Ok(dto);
         }
 
@@ -133,8 +142,10 @@ namespace CarWare.Application.Services
             await _unitOfWork.VehicleRepository.AddAsync(vehicle);
             await _unitOfWork.CompleteAsync();
 
-            var vehicleWithDetails = await _unitOfWork.VehicleRepository.GetCarByIdWithDetailsAsync(vehicle.Id);
-            var vehicleDto = _mapper.Map<VehicleDTOs>(vehicleWithDetails);
+            var vehicleWithDetails =
+                    await _unitOfWork.VehicleRepository.GetCarByIdWithDetailsAsync(vehicle.Id);
+
+            var vehicleDto = MapVehicleToDto(vehicleWithDetails);
 
             return Result<VehicleDTOs>.Ok(vehicleDto);
         }
@@ -185,6 +196,24 @@ namespace CarWare.Application.Services
             await _unitOfWork.CompleteAsync();
 
             return Result<bool>.Ok(true);
+        }
+
+        //Helper 
+        private VehicleDTOs MapVehicleToDto(Vehicle vehicle)
+        {
+            var dto = _mapper.Map<VehicleDTOs>(vehicle);
+
+            dto.ImageUrl = _carImageService.GetImageUrl(
+                vehicle.Brand.Name,
+                vehicle.Model.Name
+            );
+
+            return dto;
+        }
+
+        private List<VehicleDTOs> MapVehiclesToDto(List<Vehicle> vehicles)
+        {
+            return vehicles.Select(MapVehicleToDto).ToList();
         }
     }
 }

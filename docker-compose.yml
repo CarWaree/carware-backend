@@ -1,4 +1,13 @@
 services:
+  # 1. FRONTEND SERVICE (Pulled directly from Docker Hub)
+  carware-frontend:
+    image: carwareservicecenter  # <-- Points to your cloud image
+    ports:
+      - "5173:80"                              # Maps their browser to Nginx port 80
+    environment:
+      - VITE_API_URL=https://localhost:5192         # Points frontend to their local backend API
+    restart: always
+
   carware-api:
     image: carware-backend
     build:
