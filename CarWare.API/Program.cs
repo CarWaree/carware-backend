@@ -30,9 +30,7 @@ namespace CarWare.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            //builder.WebHost.UseUrls("https://localhost:8080", "http://0.0.0.0:8080");
-            //builder.WebHost.UseUrls("http://0.0.0.0:8080");
-
+            // Configure Kestrel Ports
             builder.WebHost.ConfigureKestrel(options =>
             {
                 options.ListenAnyIP(8080); // HTTP
@@ -130,7 +128,7 @@ namespace CarWare.API
             //Role
             builder.Services.AddScoped<IRoleService, RoleService>();
 
-            builder.Services.AddHttpContextAccessor();
+            //builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             //vehicleservice
             builder.Services.AddScoped<IVehicleService, VehicleService>();
@@ -156,6 +154,8 @@ namespace CarWare.API
             builder.Services.AddScoped<INotificationService, NotificationService>();
             //Otp Generator
             builder.Services.AddScoped<IOtpGenerator, OtpGenerator>();
+            //Image Cars
+            builder.Services.AddScoped<CarImageService>();
             //JWT Token
             builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             //Refresh Token
@@ -174,29 +174,31 @@ namespace CarWare.API
                 Credential = GoogleCredential.FromFile(firebasePath)
             });
 
-            //CORS
-            //var MyAllowSpecificOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+            // if (allowedOrigins == null || allowedOrigins.Length == 0)
+            // {
+            //     // Fallback safe origins for local dev environment
+            //     allowedOrigins = new[] { "http://localhost:5173", "https://localhost:5173" };
+            // }
 
-            //builder.Services.AddCors(options =>
-            //{
-            //    options.AddPolicy("MyAllowSpecificOrigins",
-            //                      policy =>
-            //                      {
-            //                          policy
-            //                                .WithOrigins("http://localhost:5173") 
-            //                                .AllowAnyHeader()
-            //                                .AllowAnyMethod()
-            //                                .AllowCredentials();
-            //                      });
-            //});
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("CarWareCorsPolicy", policy =>
+                {
+                    policy.WithOrigins(allowedOrigins)
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+            });
 
-            builder.Services.AddCors();
+            // builder.Services.AddCors();
 
             builder.Services.AddControllers()
-             .AddJsonOptions(options =>
-             {
-                  options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-             });
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
 
             var app = builder.Build();
 
@@ -205,9 +207,27 @@ namespace CarWare.API
                 .AllowAnyMethod()
                 .AllowAnyHeader());
 
-            app.MapGet("/", () => "CORS is open!");
+            //Custom Middleware
+            app.UseMiddleware<ExceptionMiddleware>();
 
-            //update Database 
+            //Configure the HTTP request pipeline.
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+
+            app.UseRouting();
+
+            app.UseCors("CarWareCorsPolicy");
+            // app.MapGet("/", () => "CORS is open!");
+
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            #region update Database 
             using var scope = app.Services.CreateScope();
             var services = scope.ServiceProvider;
 
@@ -231,27 +251,10 @@ namespace CarWare.API
                 var logger = services.GetRequiredService<ILogger<Program>>();
                 logger.LogError(ex, " Error during migration or seeding");
             }
+            #endregion
 
             //Create roles when the app starts
             await CreateRolesAsync(app);
-
-            //Custom Middleware
-            app.UseMiddleware<ExceptionMiddleware>();
-
-            //Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
-            app.UseHttpsRedirection();
-
-            app.UseStaticFiles();
-
-            app.UseCors("MyAllowSpecificOrigins");
-
-            app.UseAuthentication();
-            app.UseAuthorization();
 
             app.UseHangfireDashboard("/hangfire");
             RecurringJob.AddOrUpdate<MaintenanceReminderJob>(
