@@ -8,8 +8,6 @@ namespace CarWare.Infrastructure.Context
     {
         public ApplicationDbContext(DbContextOptions options) : base(options) { }
 
-        public ApplicationDbContext() { }
-
         //DbSets
         public DbSet<Vehicle> vehicles { get; set; }
         public DbSet<Brand> brands { get; set; }

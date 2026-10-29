@@ -31,37 +31,41 @@ namespace CarWare.API
             var builder = WebApplication.CreateBuilder(args);
 
             // Configure Kestrel Ports
-            builder.WebHost.ConfigureKestrel(options =>
-            {
-                options.ListenAnyIP(8080); // HTTP
+            //builder.WebHost.ConfigureKestrel(options =>
+            //{
+            //    options.Configure(builder.Configuration.GetSection("Kestrel"));
+            //    options.ListenAnyIP(8080);
+            //    options.ListenAnyIP(8081, listenOptions =>
+            //    {
+            //        listenOptions.UseHttps("/https/carware.pfx", "123456");
+            //    });
+            //});
 
-                options.ListenAnyIP(8081, listenOptions =>
-                {
-                    listenOptions.UseHttps();
-                });
-            });
+            // builder.WebHost.ConfigureKestrel(options =>
+            // {
+            //     options.ListenAnyIP(8080);
+            // });
 
             var jwtKey = builder.Configuration["JWT:Key"];
-
             if (string.IsNullOrEmpty(jwtKey))
                 throw new Exception("JWT Key is missing");
 
-            //Add services to the container.
+            // Add services to the container.
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            //Register Services
+            // Register Services
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
-            //Database
+            // Database
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
             });
 
-            //Identity
+            // Identity
             builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
                 options.Password.RequiredLength = 6;
@@ -72,12 +76,12 @@ namespace CarWare.API
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-            //JWT Settings
+            // JWT Settings
             builder.Services.Configure<JWT>(builder.Configuration.GetSection("JWT"));
 
-            //JWT Authentication
+            // JWT Authentication
             var jwtSettings = builder.Configuration.GetSection("JWT").Get<JWT>();
-            var key = Encoding.UTF8.GetBytes(jwtSettings.Key);
+            var key = Encoding.UTF8.GetBytes(jwtSettings!.Key);
 
             builder.Services.AddAuthentication(options =>
             {
@@ -106,169 +110,150 @@ namespace CarWare.API
                 googleOptions.CallbackPath = "/auth/google-callback";
             });
 
-            //Accessor
+            // HttpContext accessor
             builder.Services.AddHttpContextAccessor();
 
-            //Hangfire 
+            // Hangfire
             builder.Services.AddHangfire(config =>
                 config.UseSqlServerStorage(
                     builder.Configuration.GetConnectionString("DefaultConnection")));
             builder.Services.AddHangfireServer();
 
-            //Memory Cashe
+            // Memory cache
             builder.Services.AddDistributedMemoryCache();
 
-            //Custom Service [Email Sender]
+            // Custom services
             builder.Services.AddScoped<IEmailSender, EmailSender>();
-            builder.Services.AddScoped<IFcmService, FcmService>(); 
+            builder.Services.AddScoped<IFcmService, FcmService>();
 
-            //Unit of Work
+            // Unit of Work
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            //Role
+            // Role
             builder.Services.AddScoped<IRoleService, RoleService>();
 
-            //builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-            //vehicleservice
             builder.Services.AddScoped<IVehicleService, VehicleService>();
-            //maintenancetypeservice
             builder.Services.AddScoped<IMaintenanceTypeService, MaintenanceTypeService>();
-            //service center
             builder.Services.AddScoped<IServiceCenterService, ServiceCenterService>();
-            //maintenence reminder 
             builder.Services.AddScoped<IMaintenanceReminderService, MaintenanceReminderService>();
-            //Appointment
             builder.Services.AddScoped<IAppointmentService, AppointmentService>();
-            //Profile
             builder.Services.AddScoped<IProfileService, ProfileService>();
-            //Dashboard
             builder.Services.AddScoped<IDashboardService, DashboardService>();
             builder.Services.AddScoped<ISetupService, SetupService>();
-            //Service Requests
             builder.Services.AddScoped<IServiceRequestQueryService, ServiceRequestQueryService>();
             builder.Services.AddScoped<IServiceRequestWorkflowService, ServiceRequestWorkflowService>();
-            //History
             builder.Services.AddScoped<IServiceRequestHistoryService, ServiceRequestHistoryService>();
-            //Notification
             builder.Services.AddScoped<INotificationService, NotificationService>();
-            //Otp Generator
             builder.Services.AddScoped<IOtpGenerator, OtpGenerator>();
-            //Image Cars
             builder.Services.AddScoped<CarImageService>();
-            //JWT Token
             builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-            //Refresh Token
             builder.Services.AddScoped<IRefreshTokenGenerator, RefreshTokenGenerator>();
-            //autoMapper
+
+            // AutoMapper
             builder.Services.AddAutoMapper(typeof(AuthProfile).Assembly);
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
-            //Jobs
+
+            // Jobs
             builder.Services.AddScoped<NotificationJobs>();
             builder.Services.AddScoped<MaintenanceReminderJob>();
-            //Firebase
+
+            // Firebase
+            // NOTE: This currently expects the credential file to exist at runtime.
+            // We will move this to secure configuration/environment-based credentials in a later phase.
             var firebasePath = Path.Combine(Directory.GetCurrentDirectory(), "Firebase", "firebase-key.json");
 
-            FirebaseApp.Create(new AppOptions()
+            FirebaseApp.Create(new AppOptions
             {
                 Credential = GoogleCredential.FromFile(firebasePath)
             });
 
-            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
-            // if (allowedOrigins == null || allowedOrigins.Length == 0)
-            // {
-            //     // Fallback safe origins for local dev environment
-            //     allowedOrigins = new[] { "http://localhost:5173", "https://localhost:5173" };
-            // }
+            // CORS: allow only explicitly configured frontend origins.
+            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+                ?? Array.Empty<string>();
 
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("CarWareCorsPolicy", policy =>
                 {
-                    policy.WithOrigins(allowedOrigins)
-                          .AllowAnyHeader()
-                          .AllowAnyMethod()
-                          .AllowCredentials();
+                    policy
+                        .WithOrigins(allowedOrigins)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
                 });
             });
 
-            // builder.Services.AddCors();
-
             builder.Services.AddControllers()
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            });
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
 
             var app = builder.Build();
 
-            app.UseCors(policy => policy
-                .AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader());
-
-            //Custom Middleware
+            // Custom Middleware
             app.UseMiddleware<ExceptionMiddleware>();
 
-            //Configure the HTTP request pipeline.
+            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-            app.UseHttpsRedirection();
+
+            // app.UseHttpsRedirection();
             app.UseStaticFiles();
 
             app.UseRouting();
 
+            // Apply the single, explicitly configured CORS policy.
             app.UseCors("CarWareCorsPolicy");
-            // app.MapGet("/", () => "CORS is open!");
 
             app.UseAuthentication();
             app.UseAuthorization();
 
-            #region update Database 
-            using var scope = app.Services.CreateScope();
-            var services = scope.ServiceProvider;
-
-            var LoggerFactory = services.GetRequiredService<ILoggerFactory>();
-
-            try
+            #region Update Database
+            using (var scope = app.Services.CreateScope())
             {
-                var context = services.GetRequiredService<ApplicationDbContext>();
-                var logger = services.GetRequiredService<ILogger<Program>>();
+                var services = scope.ServiceProvider;
+                try
+                {
+                    var context = services.GetRequiredService<ApplicationDbContext>();
+                    var logger = services.GetRequiredService<ILogger<Program>>();
 
-                //  Apply pending migrations
-                await context.Database.MigrateAsync();
+                    // Apply pending migrations and seed data.
+                    await context.Database.MigrateAsync();
+                    await StoreContextSeed.SeedAsync(context);
 
-                //  Run vehicle seeder (using your JSON file)
-                await StoreContextSeed.SeedAsync(context);
-
-                logger.LogInformation("Database migrated & seeded successfully ");
-            }
-            catch (Exception ex)
-            {
-                var logger = services.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, " Error during migration or seeding");
+                    logger.LogInformation("Database migrated and seeded successfully.");
+                }
+                catch (Exception ex)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "Error during migration or seeding.");
+                }
             }
             #endregion
 
-            //Create roles when the app starts
+            // Create roles when the app starts.
             await CreateRolesAsync(app);
 
+            // NOTE: Hangfire Dashboard authorization is a separate security-baseline task.
+            // Do not expose this dashboard publicly in production until an authorization filter is added.
             app.UseHangfireDashboard("/hangfire");
+
             RecurringJob.AddOrUpdate<MaintenanceReminderJob>(
                 "maintenance-reminders",
-                        job => job.Execute(),
-                        "*/5 * * * *"
-            );
+                job => job.Execute(),
+                "*/5 * * * *");
 
             app.MapControllers();
 
             app.Run();
         }
 
-        //Helper For Seeding Roles
+        // Helper for seeding roles
         private static async Task CreateRolesAsync(IApplicationBuilder app)
         {
             using var scope = app.ApplicationServices.CreateScope();
