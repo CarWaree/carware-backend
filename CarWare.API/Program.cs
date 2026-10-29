@@ -1,4 +1,5 @@
 ﻿using CarWare.API.Middlewares;
+using CarWare.API.Security;
 using CarWare.Application.Common.helper;
 using CarWare.Application.Common.Security;
 using CarWare.Application.Interfaces;
@@ -239,10 +240,15 @@ namespace CarWare.API
             // Create roles when the app starts.
             await CreateRolesAsync(app);
 
-            // NOTE: Hangfire Dashboard authorization is a separate security-baseline task.
-            // Do not expose this dashboard publicly in production until an authorization filter is added.
-            app.UseHangfireDashboard("/hangfire");
-
+            app.UseHangfireDashboard(
+                "/hangfire",
+                new DashboardOptions
+                {
+                    Authorization = new[]
+                    {
+            new HangfireSuperAdminAuthorizationFilter()
+                    }
+                });
             RecurringJob.AddOrUpdate<MaintenanceReminderJob>(
                 "maintenance-reminders",
                 job => job.Execute(),
