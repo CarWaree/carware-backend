@@ -151,8 +151,12 @@ namespace CarWare.Application.Services
         }
 
         // Update Vehicle
+
         public async Task<Result<bool>> UpdateVehicleAsync(VehicleUpdateDTO dto, string userId)
         {
+            if (string.IsNullOrWhiteSpace(userId))
+                return Result<bool>.Fail("User is not authenticated.");
+
             var vehicle = (await _unitOfWork.VehicleRepository
                 .FindAsync(v => v.Id == dto.Id && v.UserId == userId))
                 .FirstOrDefault();
@@ -160,24 +164,34 @@ namespace CarWare.Application.Services
             if (vehicle == null)
                 return Result<bool>.Fail("Vehicle not found or access denied.");
 
-            if (dto.BrandId.HasValue)
-            {
-                var brandExists = await _unitOfWork.Repository<Brand>().AnyAsync(b => b.Id == dto.BrandId.Value);
-                if (!brandExists)
-                    return Result<bool>.Fail("Brand not found.");
-                vehicle.BrandId = dto.BrandId.Value;
-            }
+            var brand = (await _unitOfWork.Repository<Brand>()
+                .FindAsync(b => b.Id == dto.BrandId))
+                .FirstOrDefault();
 
-            if (dto.ModelId.HasValue)
-            {
-                var modelExists = await _unitOfWork.Repository<Model>().AnyAsync(m => m.Id == dto.ModelId.Value);
-                if (!modelExists)
-                    return Result<bool>.Fail("Model not found.");
-                vehicle.ModelId = dto.ModelId.Value;
-            }
+            if (brand == null)
+                return Result<bool>.Fail("Brand not found.");
 
-            _mapper.Map(dto, vehicle);
+            var model = (await _unitOfWork.Repository<Model>()
+                .FindAsync(m => m.Id == dto.ModelId
+                             && m.BrandId == dto.BrandId))
+                .FirstOrDefault();
+
+            if (model == null)
+                return Result<bool>.Fail(
+                    "The selected model does not belong to the selected brand.");
+
+            vehicle.BrandId = dto.BrandId;
+            vehicle.ModelId = dto.ModelId;
+            vehicle.Name = $"{brand.Name} {model.Name}";
+            vehicle.Year = dto.Year;
+            vehicle.Color = dto.Color.Trim();
+
             await _unitOfWork.CompleteAsync();
+
+            _logger.LogInformation(
+                "Vehicle {VehicleId} updated by user {UserId}",
+                vehicle.Id,
+                userId);
 
             return Result<bool>.Ok(true);
         }

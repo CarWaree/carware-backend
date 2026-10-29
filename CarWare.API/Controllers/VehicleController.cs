@@ -23,6 +23,7 @@ namespace CarWare.API.Controllers
             _mapper = mapper;
         }
 
+        [Authorize(Roles = "SUPERADMIN,CENTERADMIN")]
         [HttpGet("all")]
         public async Task<ActionResult> GetAll()
         {
@@ -40,9 +41,17 @@ namespace CarWare.API.Controllers
         [HttpGet("my-vehicles")]
         public async Task<ActionResult> GetMyVehiclesAsync()
         {
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(ApiResponse.Fail("User is not authenticated.", 401));
+
             var result = await _vehicleService.GetMyVehiclesAsync(userId);
+
+            if (!result.Success)
+                return NotFound(ApiResponse.Fail(result.Error!, 404));
+
             return Ok(ApiResponseGeneric<List<VehicleDTOs>>.Success(
-                result.Data, "Vehicles retrieved successfully"
+                result.Data,
+                "Vehicles retrieved successfully"
             ));
         }
 
@@ -112,6 +121,7 @@ namespace CarWare.API.Controllers
 
         }
 
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse>> UpdateVehicle(int id, [FromBody] VehicleUpdateDTO dto)
         {
@@ -124,6 +134,7 @@ namespace CarWare.API.Controllers
             return Ok(ApiResponse.Success("Vehicle updated successfully"));
         }
 
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse>> DeleteVehicle(int id)
         {
