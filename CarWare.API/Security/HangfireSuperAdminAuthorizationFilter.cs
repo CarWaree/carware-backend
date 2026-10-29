@@ -1,4 +1,6 @@
-﻿using Hangfire.Dashboard;
+﻿using CarWare.API.Security;
+using Hangfire.Dashboard;
+using Microsoft.AspNetCore.Authentication;
 
 namespace CarWare.API.Security;
 
@@ -9,7 +11,13 @@ public sealed class HangfireSuperAdminAuthorizationFilter
     {
         var httpContext = context.GetHttpContext();
 
-        return httpContext.User.Identity?.IsAuthenticated == true
-            && httpContext.User.IsInRole("SUPERADMIN");
+        var result = httpContext
+            .AuthenticateAsync(HangfireCookieDefaults.Scheme)
+            .GetAwaiter()
+            .GetResult();
+
+        return result.Succeeded
+            && result.Principal?.Identity?.IsAuthenticated == true
+            && result.Principal.IsInRole("SUPERADMIN");
     }
 }

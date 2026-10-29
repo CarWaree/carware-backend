@@ -109,6 +109,17 @@ namespace CarWare.API
                 googleOptions.ClientId = builder.Configuration["Google:ClientId"];
                 googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"];
                 googleOptions.CallbackPath = "/auth/google-callback";
+            })
+            .AddCookie(HangfireCookieDefaults.Scheme, options =>
+            {
+                options.Cookie.Name = HangfireCookieDefaults.CookieName;
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.Cookie.SameSite = SameSiteMode.Strict;
+                options.Cookie.Path = "/hangfire";
+
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(15);
+                options.SlidingExpiration = false;
             });
 
             // HttpContext accessor
